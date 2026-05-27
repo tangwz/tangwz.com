@@ -400,10 +400,9 @@ async function cleanStaleOldOutputDirs({ outRoot, currentOutputDirs, reportPath 
     const outputDir = join(outRoot, entry.name);
     if (currentOutputDirs.has(outputDir)) continue;
 
-    const ownedByOldSlug = CANONICAL_POST_DIR_PATTERN.test(entry.name);
     const ownedByMarker = await containsMigrationMarker(outputDir);
     const ownedByReport = previousOutputDirs.has(outputDir);
-    if (!ownedByOldSlug && !ownedByMarker && !ownedByReport) continue;
+    if (!ownedByMarker && !ownedByReport) continue;
 
     await rm(outputDir, { recursive: true, force: true });
     cleanedOutputDirs.push(outputDir);
