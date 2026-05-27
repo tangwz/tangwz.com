@@ -28,3 +28,7 @@ public/pagefind
 
 # local worktrees
 .worktrees/
+
+# local migration scratch space
+.cache/
+migration-report.json
