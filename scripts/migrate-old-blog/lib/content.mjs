@@ -42,6 +42,10 @@ function firstArticleBody($) {
   return $("body").first();
 }
 
+function stripUnsupportedControlCharacters(value) {
+  return String(value ?? "").replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "");
+}
+
 function contentScore($, node) {
   const element = $(node);
   const textScore = element.text().replace(/\s+/g, " ").trim().length;
@@ -67,7 +71,7 @@ function mostContentRich($, nodes) {
 }
 
 function normalizeWhitespace(value) {
-  return String(value ?? "")
+  return stripUnsupportedControlCharacters(value)
     .replace(/\u00a0/g, " ")
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
@@ -75,10 +79,17 @@ function normalizeWhitespace(value) {
 }
 
 function normalizeCodeText(value) {
-  return String(value ?? "")
+  return stripUnsupportedControlCharacters(value)
     .replace(/\u00a0/g, " ")
     .replace(/\r\n?/g, "\n")
     .replace(/^\n+/, "")
+    .replace(/\n+$/, "");
+}
+
+function normalizeChromaLineText(value) {
+  return stripUnsupportedControlCharacters(value)
+    .replace(/\u00a0/g, " ")
+    .replace(/\r\n?/g, "\n")
     .replace(/\n+$/, "");
 }
 
@@ -123,6 +134,7 @@ function removeGeneratedNodes($) {
   $("details").filter((_, node) => isGeneratedDetails($, node)).remove();
   $("nav").filter((_, node) => isGeneratedNav($, node)).remove();
   $("footer").filter((_, node) => isGeneratedFooter($, node)).remove();
+  $(".footnotes hr, a.footnote-backref, a[role='doc-backlink']").remove();
 
   $("h1, h2, h3, h4, h5, h6").each((_, heading) => {
     $(heading)
@@ -152,6 +164,19 @@ function removeDanglingAnchorMarkers($) {
   });
 }
 
+function removeUnsupportedControlCharacters($, root) {
+  $(root)
+    .contents()
+    .each((_, node) => {
+      if (node.type === "text") {
+        node.data = stripUnsupportedControlCharacters(node.data);
+        return;
+      }
+
+      removeUnsupportedControlCharacters($, node);
+    });
+}
+
 function unwrapThemeFigures($) {
   $("figure").each((_, figure) => {
     const node = $(figure);
@@ -178,7 +203,7 @@ function cleanCodeBlocks($) {
         ?.replace(/^language-/, "");
 
     const lineNodes = codeNode.find(".line").toArray();
-    const lines = lineNodes.map(line => $(line).text());
+    const lines = lineNodes.map(line => normalizeChromaLineText($(line).text()));
     const rawCode = lines.length > 0 ? lines.join("\n") : codeNode.text();
     const code = normalizeCodeText(rawCode);
 
@@ -207,6 +232,7 @@ function cleanFragment(html) {
   const $ = load(`<main>${html}</main>`, null, false);
 
   cleanCodeBlocks($);
+  removeUnsupportedControlCharacters($, $("main").get(0));
   removeGeneratedNodes($);
   removeDanglingAnchorMarkers($);
   unwrapThemeFigures($);
@@ -250,6 +276,32 @@ turndown.addRule("fencedCodeBlockWithDataLang", {
     const language = codeLanguage(codeNode);
     const code = normalizeCodeText(codeNode.textContent);
     return `\n\n\`\`\`${language}\n${code}\n\`\`\`\n\n`;
+  },
+});
+
+turndown.addRule("footnoteReference", {
+  filter(node) {
+    return (
+      node.nodeName === "SUP" &&
+      /^fnref:/.test(node.getAttribute("id") ?? "") &&
+      node.querySelector("a[href^='#fn:']")
+    );
+  },
+  replacement(_content, node) {
+    const href = node.querySelector("a[href^='#fn:']")?.getAttribute("href") ?? "";
+    const id = href.replace(/^#fn:/, "");
+    return id ? `[^${id}]` : "";
+  },
+});
+
+turndown.addRule("footnoteItem", {
+  filter(node) {
+    return node.nodeName === "LI" && /^fn:/.test(node.getAttribute("id") ?? "");
+  },
+  replacement(content, node) {
+    const id = (node.getAttribute("id") ?? "").replace(/^fn:/, "");
+    const footnote = trimMarkdown(content);
+    return id && footnote ? `\n\n[^${id}]: ${footnote}\n\n` : "";
   },
 });
 
