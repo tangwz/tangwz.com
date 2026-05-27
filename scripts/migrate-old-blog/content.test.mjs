@@ -121,6 +121,24 @@ test("removes old style artifacts and generated article nodes", () => {
   assert.equal($("[class], [style], [srcset], [sizes]").length, 0);
 });
 
+test("removes nested heading anchor links from old theme markup", () => {
+  const html = `
+    <article>
+      <div class="min-w-0 min-h-0 max-w-prose">
+        <h2>
+          Heading
+          <span>
+            <a href="#heading">#</a>
+          </span>
+        </h2>
+      </div>
+    </article>`;
+
+  const markdown = htmlToMarkdown(extractArticleHtml(load(html)));
+
+  assert.equal(markdown.trim(), "## Heading");
+});
+
 test("preserves meaningful disclosure navigation and footer content", () => {
   const html = `
     <article>
