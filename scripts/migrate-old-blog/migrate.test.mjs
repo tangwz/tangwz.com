@@ -401,3 +401,33 @@ test("does not treat html-looking text inside fenced code as residual html", asy
     false
   );
 });
+
+test("does not treat html-looking text inside inline code as residual html", async () => {
+  const root = await tempMigrationDir();
+  const sourceRoot = join(root, "source");
+  const outRoot = join(root, "out");
+  const reportPath = join(root, "report.json");
+
+  await writeCanonicalPost({
+    sourceRoot,
+    sourceDirName: "202001-inline",
+    canonicalSlug: "inline",
+    bodyHtml: `
+      <p>This body mentions <code>&lt;coroutine&gt;</code> inline and is long enough.</p>
+    `,
+  });
+
+  const report = await runMigration({
+    sourceRoot,
+    outRoot,
+    reportPath,
+    expectedCount: 1,
+  });
+  const post = report.posts[0];
+
+  assert.equal(post.residualHtml, false);
+  assert.equal(
+    post.blockers.some(value => value === "Residual HTML remains in Markdown body"),
+    false
+  );
+});

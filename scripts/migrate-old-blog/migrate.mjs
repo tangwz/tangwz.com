@@ -162,7 +162,9 @@ function markdownTextLength(markdown) {
 }
 
 function residualHtml(markdown) {
-  const withoutFencedCode = String(markdown ?? "").replace(/```[\s\S]*?```/g, " ");
+  const withoutFencedCode = String(markdown ?? "")
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`[^`\n]+`/g, " ");
   return /<\/?[a-z][\w:-]*(?:\s[^>]*)?>/i.test(withoutFencedCode);
 }
 
@@ -269,6 +271,10 @@ async function copyAssetForPost({
     return result.markdownPath;
   }
 
+  if (result.externalUrl) {
+    return result.externalUrl;
+  }
+
   if (result.missing && isLocalAssetUrl(result.missing)) {
     postReport.missingAssets.push(result.missing);
     postReport.blockers.push(blocker(`Missing local asset: ${result.missing}`));
@@ -303,7 +309,7 @@ async function migratePost({ sourceRoot, outRoot, indexRecords, postDir }) {
       copiedBySource,
       postReport,
     });
-    if (copiedOgImage) metadata.ogImage = copiedOgImage;
+    if (copiedOgImage && copiedOgImage.startsWith("./assets/")) metadata.ogImage = copiedOgImage;
   }
 
   const requiredMissing = ["title", "pubDatetime", "description"].filter(
