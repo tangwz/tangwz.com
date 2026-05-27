@@ -266,17 +266,17 @@ test("reports invalid source root even when expected count is zero", async () =>
   assert.ok(report.blockers.includes(`Missing source posts directory: ${join(sourceRoot, "posts")}`));
 });
 
-test("removes stale old-slug output directories without deleting current posts", async () => {
+test("preserves unmarked date-shaped output directories", async () => {
   const root = await tempMigrationDir();
   const sourceRoot = join(root, "source");
   const outRoot = join(root, "out");
   const reportPath = join(root, "report.json");
-  const staleOutputDir = join(outRoot, "202001-stale");
+  const dateShapedOutputDir = join(outRoot, "202001-handwritten");
   const currentOutputDir = join(outRoot, "current-sample");
 
-  await mkdir(staleOutputDir, { recursive: true });
+  await mkdir(dateShapedOutputDir, { recursive: true });
   await mkdir(currentOutputDir, { recursive: true });
-  await writeFile(join(staleOutputDir, "index.md"), "stale");
+  await writeFile(join(dateShapedOutputDir, "index.md"), "handwritten");
   await writeFile(join(currentOutputDir, "index.md"), "current");
   await writeCanonicalPost({
     sourceRoot,
@@ -291,9 +291,9 @@ test("removes stale old-slug output directories without deleting current posts",
     expectedCount: 1,
   });
 
-  assert.equal(await pathExists(staleOutputDir), false);
+  assert.equal(await pathExists(join(dateShapedOutputDir, "index.md")), true);
   assert.equal(await pathExists(join(currentOutputDir, "index.md")), true);
-  assert.deepEqual(report.cleanedOutputDirs, [staleOutputDir]);
+  assert.deepEqual(report.cleanedOutputDirs, []);
 });
 
 test("removes marked non-date stale output directories and preserves unmarked posts", async () => {
@@ -337,6 +337,38 @@ test("removes marked non-date stale output directories and preserves unmarked po
   assert.equal(await pathExists(markedStaleDir), false);
   assert.equal(await pathExists(join(unmarkedExistingDir, "index.md")), true);
   assert.deepEqual(report.cleanedOutputDirs, [markedStaleDir]);
+});
+
+test("removes previous-report-owned output directories", async () => {
+  const root = await tempMigrationDir();
+  const sourceRoot = join(root, "source");
+  const outRoot = join(root, "out");
+  const reportPath = join(root, "migration-report.json");
+  const previousOutputDir = join(outRoot, "old-post");
+
+  await mkdir(previousOutputDir, { recursive: true });
+  await writeFile(join(previousOutputDir, "index.md"), "previous generated content");
+  await writeFile(
+    reportPath,
+    JSON.stringify({
+      posts: [{ slug: "old-post", generated: true }],
+    })
+  );
+  await writeCanonicalPost({
+    sourceRoot,
+    sourceDirName: "202001-demo",
+    canonicalSlug: "demo",
+  });
+
+  const report = await runMigration({
+    sourceRoot,
+    outRoot,
+    reportPath,
+    expectedCount: 1,
+  });
+
+  assert.equal(await pathExists(previousOutputDir), false);
+  assert.deepEqual(report.cleanedOutputDirs, [previousOutputDir]);
 });
 
 test("does not treat html-looking text inside fenced code as residual html", async () => {
