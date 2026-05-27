@@ -93,6 +93,10 @@ function normalizeChromaLineText(value) {
     .replace(/\n+$/, "");
 }
 
+function normalizeCodeLanguage(value) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
 function attributeText($, node) {
   return ["class", "id", "role", "aria-label", "data-toc"]
     .map(attr => $(node).attr(attr) ?? "")
@@ -195,12 +199,13 @@ function cleanCodeBlocks($) {
     const codeNode = preNode.find("code").first();
     if (codeNode.length === 0) return;
 
-    const language =
+    const language = normalizeCodeLanguage(
       codeNode.attr("data-lang") ||
       (codeNode.attr("class") ?? "")
         .split(/\s+/)
         .find(className => className.startsWith("language-"))
-        ?.replace(/^language-/, "");
+        ?.replace(/^language-/, "")
+    );
 
     const lineNodes = codeNode.find(".line").toArray();
     const lines = lineNodes.map(line => normalizeChromaLineText($(line).text()));
@@ -251,14 +256,14 @@ function trimMarkdown(value) {
 
 function codeLanguage(node) {
   const dataLang = node.getAttribute("data-lang");
-  if (dataLang) return dataLang;
+  if (dataLang) return normalizeCodeLanguage(dataLang);
 
   const className = node.getAttribute("class") ?? "";
   const languageClass = className
     .split(/\s+/)
     .find(value => value.startsWith("language-") || value.startsWith("lang-"));
 
-  return languageClass?.replace(/^(?:language|lang)-/, "") ?? "";
+  return normalizeCodeLanguage(languageClass?.replace(/^(?:language|lang)-/, "") ?? "");
 }
 
 const turndown = new TurndownService({
