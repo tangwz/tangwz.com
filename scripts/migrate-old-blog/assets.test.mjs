@@ -124,3 +124,148 @@ test("returns missing result when source cannot be found", async () => {
 
   assert.deepEqual(result, { markdownPath: "", missing: imageUrl });
 });
+
+test("rejects external image URLs", async () => {
+  const root = await tempMigrationDir();
+  const imageUrl = "https://example.com/posts/demo/cover.jpg";
+
+  const result = await copyReferencedAsset({
+    sourceRoot: join(root, "source"),
+    outputPostDir: join(root, "out", "demo"),
+    postSlug: "demo",
+    imageUrl,
+  });
+
+  assert.deepEqual(result, { markdownPath: "", missing: imageUrl });
+});
+
+test("rejects image URLs for a different post path", async () => {
+  const root = await tempMigrationDir();
+  const imageUrl = "/posts/other/cover.jpg";
+
+  const result = await copyReferencedAsset({
+    sourceRoot: join(root, "source"),
+    outputPostDir: join(root, "out", "demo"),
+    postSlug: "demo",
+    imageUrl,
+  });
+
+  assert.deepEqual(result, { markdownPath: "", missing: imageUrl });
+});
+
+test("strips query strings and hashes before copying", async () => {
+  const root = await tempMigrationDir();
+  const sourceRoot = join(root, "source");
+  const outputPostDir = join(root, "out", "demo");
+  const sourceFile = join(sourceRoot, "posts", "demo", "cover.jpg");
+  await mkdir(join(sourceRoot, "posts", "demo"), { recursive: true });
+  await writeFile(sourceFile, "cover with query");
+
+  const result = await copyReferencedAsset({
+    sourceRoot,
+    outputPostDir,
+    postSlug: "demo",
+    imageUrl: "/posts/demo/cover.jpg?width=1200#hero",
+  });
+
+  assert.equal(result.markdownPath, "./assets/cover.jpg");
+  assert.equal(result.copiedFrom, sourceFile);
+  assert.equal(await readFile(result.copiedTo, "utf8"), "cover with query");
+});
+
+test("decodes percent-encoded image paths", async () => {
+  const root = await tempMigrationDir();
+  const sourceRoot = join(root, "source");
+  const outputPostDir = join(root, "out", "demo");
+  const sourceFile = join(sourceRoot, "posts", "demo", "a b.jpg");
+  await mkdir(join(sourceRoot, "posts", "demo"), { recursive: true });
+  await writeFile(sourceFile, "encoded name");
+
+  const result = await copyReferencedAsset({
+    sourceRoot,
+    outputPostDir,
+    postSlug: "demo",
+    imageUrl: "/posts/demo/a%20b.jpg",
+  });
+
+  assert.equal(result.markdownPath, "./assets/a b.jpg");
+  assert.equal(result.copiedFrom, sourceFile);
+  assert.equal(await readFile(result.copiedTo, "utf8"), "encoded name");
+});
+
+test("returns missing when percent encoding is malformed", async () => {
+  const root = await tempMigrationDir();
+  const imageUrl = "/posts/demo/bad%zz.jpg";
+
+  const result = await copyReferencedAsset({
+    sourceRoot: join(root, "source"),
+    outputPostDir: join(root, "out", "demo"),
+    postSlug: "demo",
+    imageUrl,
+  });
+
+  assert.deepEqual(result, { markdownPath: "", missing: imageUrl });
+});
+
+test("rejects traversal outside the current post directory", async () => {
+  const root = await tempMigrationDir();
+  const sourceRoot = join(root, "source");
+  const outputPostDir = join(root, "out", "demo");
+  const secretFile = join(sourceRoot, "posts", "other", "secret.jpg");
+  await mkdir(join(sourceRoot, "posts", "other"), { recursive: true });
+  await writeFile(secretFile, "secret image");
+
+  const imageUrl = "/posts/demo/../other/secret.jpg";
+  const result = await copyReferencedAsset({
+    sourceRoot,
+    outputPostDir,
+    postSlug: "demo",
+    imageUrl,
+  });
+
+  assert.deepEqual(result, { markdownPath: "", missing: imageUrl });
+});
+
+test("avoids overwriting existing target files", async () => {
+  const root = await tempMigrationDir();
+  const sourceRoot = join(root, "source");
+  const outputPostDir = join(root, "out", "demo");
+  const sourceFile = join(sourceRoot, "posts", "demo", "cover.jpg");
+  const existingFile = join(outputPostDir, "assets", "cover.jpg");
+  await mkdir(join(sourceRoot, "posts", "demo"), { recursive: true });
+  await mkdir(join(outputPostDir, "assets"), { recursive: true });
+  await writeFile(sourceFile, "new cover");
+  await writeFile(existingFile, "existing cover");
+
+  const result = await copyReferencedAsset({
+    sourceRoot,
+    outputPostDir,
+    postSlug: "demo",
+    imageUrl: "/posts/demo/cover.jpg",
+  });
+
+  assert.equal(result.markdownPath, "./assets/cover-2.jpg");
+  assert.equal(await readFile(existingFile, "utf8"), "existing cover");
+  assert.equal(await readFile(result.copiedTo, "utf8"), "new cover");
+});
+
+test("copies derivative when original asset does not exist", async () => {
+  const root = await tempMigrationDir();
+  const sourceRoot = join(root, "source");
+  const outputPostDir = join(root, "out", "demo");
+  const derivativeName = "cover_hu123abc_1200x630_resize_q75_box.jpg";
+  const sourceFile = join(sourceRoot, "posts", "demo", derivativeName);
+  await mkdir(join(sourceRoot, "posts", "demo"), { recursive: true });
+  await writeFile(sourceFile, "derivative image");
+
+  const result = await copyReferencedAsset({
+    sourceRoot,
+    outputPostDir,
+    postSlug: "demo",
+    imageUrl: `/posts/demo/${derivativeName}`,
+  });
+
+  assert.equal(result.markdownPath, `./assets/${derivativeName}`);
+  assert.equal(result.copiedFrom, sourceFile);
+  assert.equal(await readFile(result.copiedTo, "utf8"), "derivative image");
+});
