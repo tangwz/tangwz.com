@@ -17,9 +17,9 @@ _本次 TLA+ 入门教程系列将分为几个部分，帮助你从零掌握 TLA
 
 ## 前言
 
-1960 年代中后期，软件行业开始爆发“软件危机（Software Crisis）”[1](#fn:1)。所谓“软件危机”，是指在软件开发及维护的过程中所遇到的一系列严重问题，这些问题皆可能导致软件寿命缩短、甚至夭折。随着急速增长的算力和软件越来越复杂，软件开发成为一项难以管理、高风险、高失败率的活动。从本质上来说，软件危机还意味着**写出正确、可理解、可验证的程序十分困难**。
+1960 年代中后期，软件行业开始爆发“软件危机（Software Crisis）”[^1]。所谓“软件危机”，是指在软件开发及维护的过程中所遇到的一系列严重问题，这些问题皆可能导致软件寿命缩短、甚至夭折。随着急速增长的算力和软件越来越复杂，软件开发成为一项难以管理、高风险、高失败率的活动。从本质上来说，软件危机还意味着**写出正确、可理解、可验证的程序十分困难**。
 
-> 软体危机的主要原因，很不客气地说：在没有机器的时候，编程根本不是问题；当我们有了电脑，编程开始变成问题；而现在我们有巨大的电脑，编程就成为了一个同样巨大的问题。—— Edsger Dijkstra [2](#fn:2)
+> 软体危机的主要原因，很不客气地说：在没有机器的时候，编程根本不是问题；当我们有了电脑，编程开始变成问题；而现在我们有巨大的电脑，编程就成为了一个同样巨大的问题。—— Edsger Dijkstra [^2]
 
 针对“软件危机”，人们提出了种种解决方案，归纳起来基本有两类：
 
@@ -52,7 +52,7 @@ Leslie Lamport 在并发和分布式系统领域做出开创性贡献，并因�
 
 这里的关键词是数字系统和 high-level，数字系统包括算法、程序和各种软硬件在内的系统，high-level 意味着是在代码级别之上，位于设计级别进行思考。
 
-> TLA+ 按照官方文档[3](#fn:3)，应该写作 $TLA^+$，即 + 号在 TLA 的右上方，但是这给网页排版造成了一定困难，因此常常写为 TLA+ 即可。
+> TLA+ 按照官方文档[^3]，应该写作 $TLA^+$，即 + 号在 TLA 的右上方，但是这给网页排版造成了一定困难，因此常常写为 TLA+ 即可。
 
 ![TLA+ 的官方写法](./assets/tla.jpeg)
 
@@ -86,13 +86,13 @@ TLA+ 如此有用的另一个关键点是，TLA+ 有一个被称为 TLC 的模�
 
 许多工程师会因此产生质疑，直觉上认为这个东西投入产出效益低，平常写代码说不定连文档和单元测试都没时间写，还要额外写一个 TLA+ 去单纯验证系统，真的值得吗？
 
-笔者觉得这样的质疑是合理的，毕竟绩效考核都看最终产出，在国内大厂你甚至没有时间去弄这玩意。不过根据笔者的观察，现在国内基础软件创业公司越来越多，TLA+ 的使用也多了起来，笔者找到的有：TiDB[4](#fn:4)、TDengine[5](#fn:5)、KingbaseES[6](#fn:6) 等企业。
+笔者觉得这样的质疑是合理的，毕竟绩效考核都看最终产出，在国内大厂你甚至没有时间去弄这玩意。不过根据笔者的观察，现在国内基础软件创业公司越来越多，TLA+ 的使用也多了起来，笔者找到的有：TiDB[^4]、TDengine[^5]、KingbaseES[^6] 等企业。
 
-面对这些质疑，Lamport 也找了他在 Intel、Amazon 的熟人，了解他们对于 TLA+ 的使用情况[7](#fn:7)。实际上 TLA+ 在学术界和工业界都有牛逼的人物和厂商背书，据统计，国外使用 TLA+ 的经典案例有：
+面对这些质疑，Lamport 也找了他在 Intel、Amazon 的熟人，了解他们对于 TLA+ 的使用情况[^7]。实际上 TLA+ 在学术界和工业界都有牛逼的人物和厂商背书，据统计，国外使用 TLA+ 的经典案例有：
 
 *   Intel 将 TLA+ 用于工业硬件建模，帮助工程师在实际构建之前进行思考；
 *   AWS 从 2011 年开始使用 TLA+，TLA+ 模型检查在 DynamoDB，S3，EBS 和内部分布式锁管理器中均检测出了难以发现的潜在错误，AWS 已经发表了数篇形式化方法的论文;
-*   Microsoft 在 Xbox 360，Azure 中都有使用 TLA+，还使用 TLA+ 设计了 Cosmos DB[8](#fn:8)；
+*   Microsoft 在 Xbox 360，Azure 中都有使用 TLA+，还使用 TLA+ 设计了 Cosmos DB[^8]；
 *   一款以网络为中心的 RTOS 应用案例；
 *   对各种分布式共识算法（Paxos、Raft 和 EPaxos 等）都提供其 TLA+ 验证；
 
@@ -102,7 +102,7 @@ TLA+ 如此有用的另一个关键点是，TLA+ 有一个被称为 TLC 的模�
 
 所以，即使你不打算使用 TLA+ 来写点什么，学习 TLA+ 依然有价值，不仅能够让你快速理解别人的算法，还能提供一种新的思考方式，至少在分布式领域，能让你成为一个更好的工程师。
 
-况且，TLA+ 并不难学习，Amazon 分享的案例显示[9](#fn:9)，不论是老鸟还是新手，都能在几周内上手 TLA+，是非常值得投资的技术。
+况且，TLA+ 并不难学习，Amazon 分享的案例显示[^9]，不论是老鸟还是新手，都能在几周内上手 TLA+，是非常值得投资的技术。
 
 笔者相信，跟着本次 TLA+ 系列，你甚至不需要几周时间，就可以入门 TLA+，从而帮助你对系统行为进行清晰思考（科学视角），看懂 Paxos 和 Raft 算法的 TLA+ 描述，验证分布式协议的正确性。
 
@@ -110,22 +110,20 @@ TLA+ 如此有用的另一个关键点是，TLA+ 有一个被称为 TLC 的模�
 
 ## 参考引用
 
-* * *
+[^1]: 软件危机（Software Crisis）：https://en.wikipedia.org/wiki/Software\_crisis
 
-1.  软件危机（Software Crisis）：https://en.wikipedia.org/wiki/Software\_crisis [↩︎](#fnref:1)
+[^2]: Dijkstra, E. W. The Humble Programmer. Communications of the ACM. Aug 1972, 15 (10): 859–866. doi:10.1145/355604.361591.
 
-2.  Dijkstra, E. W. The Humble Programmer. Communications of the ACM. Aug 1972, 15 (10): 859–866. doi:10.1145/355604.361591. [↩︎](#fnref:2)
+[^3]: TLA+ 官方主页：https://lamport.azurewebsites.net/tla/tla.html
 
-3.  TLA+ 官方主页：https://lamport.azurewebsites.net/tla/tla.html [↩︎](#fnref:3)
+[^4]: TiDB TLA+ 规约：https://github.com/pingcap/tla-plus
 
-4.  TiDB TLA+ 规约：https://github.com/pingcap/tla-plus [↩︎](#fnref:4)
+[^5]: TDengine 中有使用 Raft 的 TLA+ 规约：https://www.taosdata.com/techtalk/8976.html
 
-5.  TDengine 中有使用 Raft 的 TLA+ 规约：https://www.taosdata.com/techtalk/8976.html [↩︎](#fnref:5)
+[^6]: KingbaseES 使用TLA+和PlusCal增强产品的可靠性：https://bbs.kingbase.com.cn/thread-753-1-1.html
 
-6.  KingbaseES 使用TLA+和PlusCal增强产品的可靠性：https://bbs.kingbase.com.cn/thread-753-1-1.html [↩︎](#fnref:6)
+[^7]: Industrial Use of TLA+： [https://lamport.azurewebsites.net/tla/industrial-use.html](https://lamport.azurewebsites.net/tla/industrial-use.html)
 
-7.  Industrial Use of TLA+： [https://lamport.azurewebsites.net/tla/industrial-use.html](https://lamport.azurewebsites.net/tla/industrial-use.html) [↩︎](#fnref:7)
+[^8]: High-level TLA+ specifications for the five consistency levels offered by Azure Cosmos DB：https://github.com/Azure/azure-cosmos-tla
 
-8.  High-level TLA+ specifications for the five consistency levels offered by Azure Cosmos DB：https://github.com/Azure/azure-cosmos-tla [↩︎](#fnref:8)
-
-9.  How Amazon Web Services Uses Formal Methods, Chris Newcombe, Tim Rath, Fan Zhang, Bogdan [↩︎](#fnref:9)
+[^9]: How Amazon Web Services Uses Formal Methods, Chris Newcombe, Tim Rath, Fan Zhang, Bogdan

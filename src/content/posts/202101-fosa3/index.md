@@ -129,13 +129,10 @@ Order：
 
 例如，在很多语言中，通常会把大于 0 的数字认为是 True，0 认为是 False。下面是 Java 中的一个具体例子：
 
-```Java
+```java
 a.compareTo(b)
-
 // 如果 a = b，则返回值 0；
-
 // 如果 a > b，则返回大于 0 的值；
-
 // 如果 a < b，则返回小于 0 的值。
 ```
 
@@ -151,15 +148,11 @@ a.compareTo(b)
 
 ```javascript
 class User { FirstName, LastName, Address }
-
 void SaveUser(User);
 
 myrepo.SaveUser(new User{
-
         FirstName = "bob",
-
         LastName = "Marley",
-
         Address = "Jamaica"});
 ```
 
@@ -191,23 +184,16 @@ email.setSubject("whoops");
 
 ```javascript
 // using bootstrap modal
-
 $(element).modal('hide')
-
 $(element).modal('show') // Error!
 
 // 隐藏一个 modal 大约需要 500ms 的动画，
-
 // 如果你在这时候直接调用了 'show'，将会发生异常
 
 // 我们必须这样做
-
 $(element).modal('hide')
-
 $(element).on('hidden.bs.modal', ()=>{
-
     $(element).modal('show') // ok
-
 })
 ```
 

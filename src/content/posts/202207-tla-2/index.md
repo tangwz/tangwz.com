@@ -17,21 +17,16 @@ _本次 TLA+ 入门教程系列将分为几个部分，帮助你从零掌握 TLA
 
 ## 1、形式化方法
 
-上一节我们介绍了形式化方法和 TLA+，**Get Your Hands Dirty**！让我们小试牛刀，动动手，用 TLA+ 语言对一个简单的程序进行抽象。以下示例来自 Lamport 亲自出的教程[1](#fn:1)。
+上一节我们介绍了形式化方法和 TLA+，**Get Your Hands Dirty**！让我们小试牛刀，动动手，用 TLA+ 语言对一个简单的程序进行抽象。以下示例来自 Lamport 亲自出的教程[^1]。
 
 首先，我们有以下简单 C 程序，`someNumber()` 函数返回一个 0 到 1000 中的随机值，然后对变量 `i` 自增 +1。
 
 ```c
 int i;
-
 void main() {
-
   // someNumber() 返回 0 到 1000 中的一个数字
-
   i = someNumber();
-
   i = i + 1;
-
 }
 ```
 
@@ -51,13 +46,9 @@ void main() {
 
 ```c
 int i;
-
 void main() {
-
   i = someNumber(); // pc = "start"
-
   i = i + 1;        // pc = "middle"
-
 }                   // pc = "done"
 ```
 
@@ -177,7 +168,7 @@ Next == Pick \/ Add1
 
 ## 2、使用 TLA+ 工具箱验证模型
 
-首先你需要前往官网下载 [TLA+ Toolbox](https://tla.msr-inria.inria.fr/tlatoolbox/products/)[2](#fn:2)，或者[从 Github 进行下载](https://github.com/tlaplus/tlaplus/releases/tag/v1.7.2)[3](#fn:3)。
+首先你需要前往官网下载 [TLA+ Toolbox](https://tla.msr-inria.inria.fr/tlatoolbox/products/)[^2]，或者[从 Github 进行下载](https://github.com/tlaplus/tlaplus/releases/tag/v1.7.2)[^3]。
 
 打开工具箱，点击 “File -> Open Spec -> Add New Spec…” 创建一个新的 TLA+ 规约，起名为 SimpleProgram.tla，并保存在你想保存的位置。
 
@@ -225,10 +216,8 @@ TLA+ 难吗？确实有点难，以至于工程师们往往只有在设计很关
 
 ## 参考资料
 
-* * *
+[^1]: Lamport 亲自出的教程：http://lamport.azurewebsites.net/video/videos.html
 
-1.  Lamport 亲自出的教程：http://lamport.azurewebsites.net/video/videos.html [↩︎](#fnref:1)
+[^2]: 下载 TLA+ Toolbox：https://tla.msr-inria.inria.fr/tlatoolbox/products/
 
-2.  下载 TLA+ Toolbox：https://tla.msr-inria.inria.fr/tlatoolbox/products/ [↩︎](#fnref:2)
-
-3.  从 Github 下载：https://github.com/tlaplus/tlaplus/releases/tag/v1.7.2 [↩︎](#fnref:3)
+[^3]: 从 Github 下载：https://github.com/tlaplus/tlaplus/releases/tag/v1.7.2

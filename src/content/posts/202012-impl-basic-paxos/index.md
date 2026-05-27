@@ -22,29 +22,18 @@ draft: false
 
 我们定义 Proposer 如下：
 
-```Go
+```go
 type proposer struct {
-
 	// server id
-
 	id int
-
 	// the largest round number the server has seen
-
 	round int
-
 	// proposal number = (round number, serverID)
-
 	number int
-
 	// proposal value
-
 	value     string
-
 	acceptors map[int]bool
-
 	net       network
-
 }
 ```
 
@@ -52,29 +41,19 @@ type proposer struct {
 
 Acceptor 的结构体：
 
-```Go
+```go
 type acceptor struct {
-
 	// server id
-
 	id int
-
 	// the number of the proposal this server will accept, or 0 if it has never received a Prepare request
-
 	promiseNumber int
-
 	// the number of the last proposal the server has accepted, or 0 if it never accepted any.
-
 	acceptedNumber int
-
 	// the value from the most recent proposal the server has accepted, or null if it has never accepted a proposal
-
 	acceptedValue string
 
 	learners []int
-
 	net      network
-
 }
 ```
 
@@ -95,35 +74,23 @@ type acceptor struct {
 
 这样看，我们的消息结构体只需要提案编号和提案值，加上一个消息类型，用来区分是哪个阶段的消息。消息结构体定义在 message.go 文件，具体如下：
 
-```Go
+```go
 // MsgType represents the type of a paxos phase.
-
 type MsgType uint8
 
 const (
-
 	Prepare MsgType = iota
-
 	Promise
-
 	Propose
-
 	Accept
-
 )
 
 type message struct {
-
 	tp     MsgType
-
 	from   int
-
 	to     int
-
 	number int    // proposal number
-
 	value  string // proposal value
-
 }
 ```
 
@@ -131,67 +98,44 @@ type message struct {
 
 网络上可以做的选择和优化很多，但这里为了保持简单的原则，我们将网络定义成 `interface`。后面完全可以改成 RPC 或 API 等其它通信方式来实现（没错，我已经实现了一个 Go RPC 的版本了）。
 
-```Go
+```go
 type network interface {
-
 	send(m message)
-
 	recv(timeout time.Duration) (message, bool)
-
 }
 ```
 
 接下里我们去实现 network 接口：
 
-```Go
+```go
 type Network struct {
-
 	queue map[int]chan message
-
 }
 
 func newNetwork(nodes ...int) *Network {
-
 	pn := &Network{
-
 		queue: make(map[int]chan message, 0),
-
 	}
 
 	for _, a := range nodes {
-
 		pn.queue[a] = make(chan message, 1024)
-
 	}
-
 	return pn
-
 }
 
 func (net *Network) send(m message) {
-
 	log.Printf("net: send %+v", m)
-
 	net.queue[m.to] <- m
-
 }
 
 func (net *Network) recvFrom(from int, timeout time.Duration) (message, bool) {
-
 	select {
-
 	case m := <-net.queue[from]:
-
 		log.Printf("net: recv %+v", m)
-
 		return m, true
-
 	case <-time.After(timeout):
-
 		return message{}, false
-
 	}
-
 }
 ```
 
@@ -218,55 +162,33 @@ func (net *Network) recvFrom(from int, timeout time.Duration) (message, bool) {
 
 ### 第一轮 Prepare RPCs 请求阶段：
 
-```Go
+```go
 // Phase 1. (a) A proposer selects a proposal number n
-
 // and sends a prepare request with number n to a majority of acceptors.
-
 func (p *proposer) prepare() []message {
-
 	p.round++
-
 	p.number = p.proposalNumber()
-
 	msg := make([]message, p.majority())
-
 	i := 0
 
 	for to := range p.acceptors {
-
 		msg[i] = message{
-
 			tp:     Prepare,
-
 			from:   p.id,
-
 			to:     to,
-
 			number: p.number,
-
 		}
-
 		i++
-
 		if i == p.majority() {
-
 			break
-
 		}
-
 	}
-
 	return msg
-
 }
 
 // proposal number = (round number, serverID)
-
 func (p *proposer) proposalNumber() int {
-
 	return p.round<< 16 | p.id
-
 }
 ```
 
@@ -278,33 +200,20 @@ Prepare 请求阶段我们将 round+1 然后发送给多数派 Acceptors。
 
 接下来在 `acceptor.go` 文件中处理请求：
 
-```Go
+```go
 func (a *acceptor) handlePrepare(args message) (message, bool) {
-
 	if a.promiseNumber >= args.number {
-
 		return message{}, false
-
 	}
-
 	a.promiseNumber = args.number
-
 	msg := message{
-
 		tp:     Promise,
-
 		from:   a.id,
-
 		to:     args.from,
-
 		number: a.acceptedNumber,
-
 		value:  a.acceptedValue,
-
 	}
-
 	return msg, true
-
 }
 ```
 
@@ -313,45 +222,27 @@ func (a *acceptor) handlePrepare(args message) (message, bool) {
 
 ### 第二轮 Accept RPCs 请求阶段：
 
-```Go
+```go
 func (p *proposer) accept() []message {
-
 	msg := make([]message, p.majority())
-
 	i := 0
-
 	for to, ok := range p.acceptors {
-
 		if ok {
-
 			msg[i] = message{
-
 				tp:     Propose,
-
 				from:   p.id,
-
 				to:     to,
-
 				number: p.number,
-
 				value:  p.value,
-
 			}
-
 			i++
-
 		}
 
 		if i == p.majority() {
-
 			break
-
 		}
-
 	}
-
 	return msg
-
 }
 ```
 
@@ -359,25 +250,17 @@ func (p *proposer) accept() []message {
 
 ### 第二轮 Accept RPCs 响应阶段：
 
-```Go
+```go
 func (a *acceptor) handleAccept(args message) bool {
-
 	number := args.number
-
 	if number >= a.promiseNumber {
-
 		a.acceptedNumber = number
-
 		a.acceptedValue = args.value
-
 		a.promiseNumber = number
-
 		return true
-
 	}
 
 	return false
-
 }
 ```
 
@@ -391,37 +274,24 @@ Acceptor 收到 `Accept()` 请求，在这期间如果 Acceptor 没有对比 a.p
 
 所以 Acceptor 接受提案后，会将接受的提案广播 Leaners，一旦 Leaners 收到超过半数的 Acceptors 的 Accepted 提案，我们就知道这个提案被 Chosen 了。
 
-```Go
+```go
 func (l *learner) chosen() (message, bool) {
-
 	acceptCounts := make(map[int]int)
-
 	acceptMsg := make(map[int]message)
 
 	for _, accepted := range l.acceptors {
-
 		if accepted.number != 0 {
-
 			acceptCounts[accepted.number]++
-
 			acceptMsg[accepted.number] = accepted
-
 		}
-
 	}
 
 	for n, count := range acceptCounts {
-
 		if count >= l.majority() {
-
 			return acceptMsg[n], true
-
 		}
-
 	}
-
 	return message{}, false
-
 }
 ```
 

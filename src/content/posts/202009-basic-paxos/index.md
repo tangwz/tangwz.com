@@ -115,19 +115,12 @@ Acceptor 接收到 `Prepare（n)` 请求，此时有两种情况：
 
 ```c++
 if (n > max_n)
-
     max_n = n     // save highest n we've seen so far
-
     if (proposal_accepted == true) // was a proposal already accepted?
-
         respond: PROMISE(n, accepted_N, accepted_VALUE)
-
     else
-
         respond: PROMISE(n)
-
 else
-
     do not respond (or respond with a "fail" message)
 ```
 
@@ -145,19 +138,12 @@ else
 
 ```c++
 did I receive PROMISE responses from a majority of acceptors?
-
 if yes
-
     do any responses contain accepted values (from other proposals)?
-
     if yes
-
         val = accepted_VALUE    // value from PROMISE message with the highest accepted ID
-
     if no
-
         val = VALUE     // we can use our proposed value
-
     send Accept(ID, val) to at least a majority of acceptors
 ```
 
@@ -169,17 +155,11 @@ Acceptor 收到 `Accept()` 请求，在这期间如果 Acceptor 没有对比 n �
 
 ```c++
 if (n >= max_n) // is the n the largest I have seen so far?
-
     proposal_accepted = true     // note that we accepted a proposal
-
     accepted_N = n             // save the accepted proposal number
-
     accepted_VALUE = VALUE       // save the accepted proposal data
-
     respond: Accepted(N, VALUE) to the proposer and all learners
-
 else
-
     do not respond (or respond with a "fail" message)
 ```
 

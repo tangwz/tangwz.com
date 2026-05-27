@@ -22,7 +22,7 @@ draft: false
 
 > A domain is the targeted subject area of a computer program. It is a term used in software engineering. Formally it represents the target subject of a specific programming project, whether narrowly or broadly defined. For example, a particular programming project might have had as a goal the creation of a program for a particular hospital, and that hospital would be the domain.
 
-简而言之，领域就是指程序的目标主题领域，假如为医院开发某个程序，那么医院就是领域。Domain 这个词常常出现在软件工程中，例如领域驱动架构(DDD)、领域模型（Domain model）。
+简而言之，领域就是指程序的目标主题领域，假如为医院开发某个程序，那么医院就是领域。Domain 这个词常常出现在软件工程中，例如领域驱动架构(DDD)、领域模型（Domain model）。
 
 ## 领域关注(Domain Concerns)
 

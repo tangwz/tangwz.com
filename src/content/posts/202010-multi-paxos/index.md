@@ -173,6 +173,6 @@ Lamport 在 Paxos 论文中的建议解决方案是：使用日志来管理这�
 
 Basic Paxos 流程是比较容易理解的，但 Multi-Paxos 却非常棘手，尤其是实际使用的时候，需要一系列的优化，这一系列优化又是不那么容易理解和做到的。这也是后来的分布式系系统纷纷转投 Raft 的原因之一吧，Paxos 的工程化实在令人头疼。
 
-但不得不说的是，大厂都有自己的 Paxos/Multi-Paxos 实现。Google 的论文 “[Paxos made live](https://www.cs.utexas.edu/users/lorenzo/corsi/cs380d/papers/paper2-1.pdf)” 介绍他们相关的工作，他们的 BigTable、chubby 都是基于文章描述的 Multi-Paxos；微信作为体量巨大的应用，也有开源的 paxos 实现：[phxpaxos](https://github.com/Tencent/phxpaxos)；[阿里的 Oceanbase 也是使用 Paxos](https://www.zhihu.com/question/52337912)——Paxos 可谓分布式系统的皇冠。
+但不得不说的是，大厂都有自己的 Paxos/Multi-Paxos 实现。Google 的论文 “[Paxos made live](https://www.cs.utexas.edu/users/lorenzo/corsi/cs380d/papers/paper2-1.pdf)” 介绍他们相关的工作，他们的 BigTable、chubby 都是基于文章描述的 Multi-Paxos；微信作为体量巨大的应用，也有开源的 paxos 实现：[phxpaxos](https://github.com/Tencent/phxpaxos)；[阿里的 Oceanbase 也是使用 Paxos](https://www.zhihu.com/question/52337912)——Paxos 可谓分布式系统的皇冠。
 
 下篇文章我们还会继续介绍 Paxos 的其它变体：[Fast-Paxos](https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/tr-2005-112.pdf)。

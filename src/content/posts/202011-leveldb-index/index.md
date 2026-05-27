@@ -26,7 +26,7 @@ leveldb 是一个持久化的 key/value 存储，key 和 value 都是任意的�
 *   用户可以创建一个瞬时快照(snapshot)，以获得数据的一致性视图。
 *   在数据上支持向前和向后迭代。
 *   使用 Snappy 压缩库对数据进行自动压缩
-*   与外部交互的操作都被抽象成了接口(如文件系统操作等)，因此用户可以根据接口自定义的操作系统交互。
+*   与外部交互的操作都被抽象成了接口(如文件系统操作等)，因此用户可以根据接口自定义的操作系统交互。
 
 ## 局限性
 
@@ -146,23 +146,16 @@ cmake .. && cmake --build .
 
 leveldb 数据库都有一个名字，该名字对应文件系统上的一个目录，该数据库内容全都存在该目录下。下面的例子显示了如何打开一个数据库，必要时创建数据库：
 
-```C++
+```c++
 #include <cassert>
-
 #include "leveldb/db.h"
 
 int main() {
-
     leveldb::DB* db;
-
     leveldb::Options options;
-
     options.create_if_missing = true;
-
     leveldb::Status status = leveldb::DB::Open(options, "/tmp/testdb", &db);
-
     assert(status.ok());
-
 }
 ```
 
@@ -178,7 +171,6 @@ options.error_if_exists = true;
 
 ```c++
 leveldb::Status s = ...;
-
 if (!s.ok()) cerr << s.ToString() << endl;
 ```
 
@@ -200,11 +192,8 @@ leveldb 提供了 `Put`、`Delete` 和 `Get` 方法来修改/查询数据库，�
 
 ```c++
 std::string value;
-
 leveldb::Status s = db->Get(leveldb::ReadOptions(), key1, &value);
-
 if (s.ok()) s = db->Put(leveldb::WriteOptions(), key2, value);
-
 if (s.ok()) s = db->Delete(leveldb::WriteOptions(), key1);
 ```
 
@@ -214,23 +203,14 @@ if (s.ok()) s = db->Delete(leveldb::WriteOptions(), key1);
 
 ```c++
 #include "leveldb/write_batch.h"
-
 ...
-
 std::string value;
-
 leveldb::Status s = db->Get(leveldb::ReadOptions(), key1, &value);
-
 if (s.ok()) {
-
   leveldb::WriteBatch batch;
-
   batch.Delete(key1);
-
   batch.Put(key2, value);
-
   s = db->Write(leveldb::WriteOptions(), &batch);
-
 }
 ```
 
@@ -246,9 +226,7 @@ if (s.ok()) {
 
 ```c++
 leveldb::WriteOptions write_options;
-
 write_options.sync = true;
-
 db->Put(write_options, ...);
 ```
 
@@ -268,15 +246,10 @@ db->Put(write_options, ...);
 
 ```c++
 leveldb::Iterator* it = db->NewIterator(leveldb::ReadOptions());
-
 for (it->SeekToFirst(); it->Valid(); it->Next()) {
-
   cout << it->key().ToString() << ": "  << it->value().ToString() << endl;
-
 }
-
 assert(it->status().ok());  // Check for any errors found during the scan
-
 delete it;
 ```
 
@@ -284,13 +257,9 @@ delete it;
 
 ```c++
 for (it->Seek(start);
-
    it->Valid() && it->key().ToString() < limit;
-
    it->Next()) {
-
   ...
-
 }
 ```
 
@@ -298,9 +267,7 @@ for (it->Seek(start);
 
 ```c++
 for (it->SeekToLast(); it->Valid(); it->Prev()) {
-
   ...
-
 }
 ```
 
@@ -312,17 +279,11 @@ for (it->SeekToLast(); it->Valid(); it->Prev()) {
 
 ```c++
 leveldb::ReadOptions options;
-
 options.snapshot = db->GetSnapshot();
-
 ... apply some updates to db ...
-
 leveldb::Iterator* iter = db->NewIterator(options);
-
 ... read using iter to view the state when the snapshot was created ...
-
 delete iter;
-
 db->ReleaseSnapshot(options.snapshot);
 ```
 
@@ -338,7 +299,6 @@ C++ 风格的 string 和 C 风格的空字符结尾的字符串很容易转换�
 leveldb::Slice s1 = "hello";
 
 std::string str("world");
-
 leveldb::Slice s2 = str;
 ```
 
@@ -346,7 +306,6 @@ leveldb::Slice s2 = str;
 
 ```c++
 std::string str = s1.ToString();
-
 assert(str == std::string("hello"));
 ```
 
@@ -354,15 +313,10 @@ assert(str == std::string("hello"));
 
 ```c++
 leveldb::Slice slice;
-
 if (...) {
-
   std::string str = ...;
-
   slice = str;
-
 }
-
 Use(slice);
 ```
 
@@ -374,45 +328,26 @@ Use(slice);
 
 ```c++
 class TwoPartComparator : public leveldb::Comparator {
-
  public:
-
   // Three-way comparison function:
-
   //   if a < b: negative result
-
   //   if a > b: positive result
-
   //   else: zero result
-
   int Compare(const leveldb::Slice& a, const leveldb::Slice& b) const {
-
     int a1, a2, b1, b2;
-
     ParseKey(a, &a1, &a2);
-
     ParseKey(b, &b1, &b2);
-
     if (a1 < b1) return -1;
-
     if (a1 > b1) return +1;
-
     if (a2 < b2) return -1;
-
     if (a2 > b2) return +1;
-
     return 0;
-
   }
 
   // Ignore the following methods for now:
-
   const char* Name() const { return "TwoPartComparator"; }
-
   void FindShortestSeparator(std::string*, const leveldb::Slice&) const {}
-
   void FindShortSuccessor(std::string*) const {}
-
 };
 ```
 
@@ -420,23 +355,14 @@ class TwoPartComparator : public leveldb::Comparator {
 
 ```c++
 // 实例化比较器
-
 TwoPartComparator cmp;
-
 leveldb::DB* db;
-
 leveldb::Options options;
-
 options.create_if_missing = true;
-
 // 将比较器赋值给 options.comparator
-
 options.comparator = &cmp;
-
 // 打开数据库
-
 leveldb::Status status = leveldb::DB::Open(options, "/tmp/testdb", &db);
-
 ...
 ```
 
@@ -464,9 +390,7 @@ leveldb 把相邻的 keys 组织在同一个 block 中(具体见后续文章针�
 
 ```c++
 leveldb::Options options;
-
 options.compression = leveldb::kNoCompression;
-
 ... leveldb::DB::Open(options, name, ...) ....
 ```
 
@@ -478,17 +402,11 @@ options.compression = leveldb::kNoCompression;
 #include "leveldb/cache.h"
 
 leveldb::Options options;
-
 options.block_cache = leveldb::NewLRUCache(100 * 1048576);  // 100MB cache
-
 leveldb::DB* db;
-
 leveldb::DB::Open(options, name, &db);
-
 ... use the db ...
-
 delete db
-
 delete options.block_cache;
 ```
 
@@ -498,15 +416,10 @@ delete options.block_cache;
 
 ```c++
 leveldb::ReadOptions options;
-
 options.fill_cache = false;
-
 leveldb::Iterator* it = db->NewIterator(options);
-
 for (it->SeekToFirst(); it->Valid(); it->Next()) {
-
   ...
-
 }
 ```
 
@@ -529,21 +442,13 @@ file_block_id -> data
 
 ```c++
 leveldb::Options options;
-
 // 设置启用基于布隆过滤器的过滤策略
-
 options.filter_policy = NewBloomFilterPolicy(10);
-
 leveldb::DB* db;
-
 // 用该设置打开数据库
-
 leveldb::DB::Open(options, "/tmp/testdb", &db);
-
 ... use the database ...
-
 delete db;
-
 delete options.filter_policy;
 ```
 
@@ -553,35 +458,23 @@ delete options.filter_policy;
 
 ```c++
 class CustomFilterPolicy : public leveldb::FilterPolicy {
-
  private:
-
   FilterPolicy* builtin_policy_;
 
  public:
-
   CustomFilterPolicy() : builtin_policy_(NewBloomFilterPolicy(10)) {}
-
   ~CustomFilterPolicy() { delete builtin_policy_; }
 
   const char* Name() const { return "IgnoreTrailingSpacesFilter"; }
 
   void CreateFilter(const Slice* keys, int n, std::string* dst) const {
-
     // Use builtin bloom filter code after removing trailing spaces
-
     std::vector<Slice> trimmed(n);
-
     for (int i = 0; i < n; i++) {
-
       trimmed[i] = RemoveTrailingSpaces(keys[i]);
-
     }
-
     return builtin_policy_->CreateFilter(&trimmed[i], n, dst);
-
   }
-
 };
 ```
 
@@ -603,13 +496,9 @@ leveldb 将校验和与它存储在文件系统中的所有数据进行关联，
 
 ```c++
 leveldb::Range ranges[2];
-
 ranges[0] = leveldb::Range("a", "c");
-
 ranges[1] = leveldb::Range("x", "z");
-
 uint64_t sizes[2];
-
 db->GetApproximateSizes(ranges, 2, sizes);
 ```
 
@@ -621,21 +510,14 @@ db->GetApproximateSizes(ranges, 2, sizes);
 
 ```c++
 // 定制自己的 Env
-
 class SlowEnv : public leveldb::Env {
-
   ... implementation of the Env interface ...
-
 };
 
 SlowEnv env;
-
 leveldb::Options options;
-
 // 用定制的 Env 打开数据库
-
 options.env = &env;
-
 Status s = leveldb::DB::Open(options, ...);
 ```
 
