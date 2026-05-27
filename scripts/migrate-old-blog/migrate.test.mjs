@@ -9,12 +9,12 @@ async function tempMigrationDir() {
   return mkdtemp(join(tmpdir(), "old-blog-migrate-"));
 }
 
-test("migrates posts with frontmatter, markdown body, assets, and report", async () => {
+test("migrates canonical posts with frontmatter, markdown body, assets, and report", async () => {
   const root = await tempMigrationDir();
   const sourceRoot = join(root, "source");
   const outRoot = join(root, "out");
   const reportPath = join(root, "report.json");
-  const postSourceDir = join(sourceRoot, "posts", "demo");
+  const postSourceDir = join(sourceRoot, "posts", "202001-demo");
 
   await mkdir(postSourceDir, { recursive: true });
   await writeFile(join(postSourceDir, "cover.png"), "cover image");
@@ -37,7 +37,7 @@ test("migrates posts with frontmatter, markdown body, assets, and report", async
         <head>
           <title>Demo Post - Site</title>
           <meta property="og:description" content="Demo summary from og" />
-          <meta property="og:image" content="/posts/demo/cover.png" />
+          <meta property="og:image" content="/posts/202001-demo/cover.png" />
           <link rel="canonical" href="https://tangwz.com/posts/demo/" />
           <script type="application/ld+json">
             {
@@ -55,7 +55,7 @@ test("migrates posts with frontmatter, markdown body, assets, and report", async
               <p class="lead" style="font-size: 18px">
                 This is a long enough body text for migration validation.
               </p>
-              <p><img class="rounded" style="width: 100%" src="/posts/demo/diagram.png" alt="Diagram" /></p>
+              <p><img class="rounded" style="width: 100%" src="/posts/202001-demo/diagram.png" alt="Diagram" /></p>
             </div>
           </article>
         </body>
@@ -91,4 +91,43 @@ test("migrates posts with frontmatter, markdown body, assets, and report", async
   );
   assert.deepEqual(persistedReport.posts[0].missingAssets, []);
   assert.deepEqual(persistedReport.posts[0].blockers, []);
+});
+
+test("ignores non-canonical post directories and reports expected count blocker", async () => {
+  const root = await tempMigrationDir();
+  const sourceRoot = join(root, "source");
+  const outRoot = join(root, "out");
+  const reportPath = join(root, "report.json");
+  const postSourceDir = join(sourceRoot, "posts", "demo");
+
+  await mkdir(postSourceDir, { recursive: true });
+  await writeFile(
+    join(postSourceDir, "index.html"),
+    `
+      <html>
+        <head>
+          <title>Demo Post - Site</title>
+          <link rel="canonical" href="https://tangwz.com/posts/demo/" />
+        </head>
+        <body>
+          <article>
+            <p>This non-canonical post directory must not be migrated.</p>
+          </article>
+        </body>
+      </html>
+    `
+  );
+
+  const report = await runMigration({
+    sourceRoot,
+    outRoot,
+    reportPath,
+    expectedCount: 1,
+  });
+  const persistedReport = JSON.parse(await readFile(reportPath, "utf8"));
+
+  assert.equal(report.migratedCount, 0);
+  assert.deepEqual(report.posts, []);
+  assert.deepEqual(persistedReport.posts, []);
+  assert.deepEqual(report.blockers, ["Expected 1 canonical posts but discovered 0"]);
 });
