@@ -139,6 +139,18 @@ test("removes nested heading anchor links from old theme markup", () => {
   assert.equal(markdown.trim(), "## Heading");
 });
 
+test("removes dangling heading anchor markers from paragraphs", () => {
+  const html = `
+    <article>
+      <p>Paragraph text.#</p>
+      <p>Language C#</p>
+    </article>`;
+
+  const markdown = htmlToMarkdown(extractArticleHtml(load(html)));
+
+  assert.equal(markdown, ["Paragraph text.", "", "Language C#"].join("\n"));
+});
+
 test("preserves meaningful disclosure navigation and footer content", () => {
   const html = `
     <article>
