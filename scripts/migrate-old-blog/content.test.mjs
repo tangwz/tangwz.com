@@ -211,6 +211,14 @@ console.log(value);
   );
 });
 
+test("normalizes code fence language names", () => {
+  const html = `<pre><code data-lang="Go">func main() {}</code></pre>`;
+
+  const markdown = htmlToMarkdown(html);
+
+  assert.equal(markdown, ["```go", "func main() {}", "```"].join("\n"));
+});
+
 test("preserves code text without Chroma span noise", () => {
   const html = `
     <div class="highlight">
