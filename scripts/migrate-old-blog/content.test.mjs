@@ -282,3 +282,44 @@ test("preserves intentional blank lines inside Chroma line spans", () => {
     ].join("\n")
   );
 });
+
+test("removes generated line breaks from Chroma line spans", () => {
+  const html = `
+    <div class="highlight">
+      <pre class="chroma"><code data-lang="cpp"><span class="line"><span class="cl">int main() {
+</span></span><span class="line"><span class="cl">  return 0;
+</span></span><span class="line"><span class="cl">}
+</span></span></code></pre>
+    </div>`;
+
+  const markdown = htmlToMarkdown(extractArticleHtml(load(`<article>${html}</article>`)));
+
+  assert.equal(markdown, ["```cpp", "int main() {", "  return 0;", "}", "```"].join("\n"));
+});
+
+test("converts html footnotes to markdown footnotes", () => {
+  const html = `
+    <p>Read the paper<sup id="fnref:1"><a href="#fn:1" class="footnote-ref" role="doc-noteref">1</a></sup>.</p>
+    <div class="footnotes" role="doc-endnotes">
+      <hr />
+      <ol>
+        <li id="fn:1">
+          <p>Paper reference <a href="#fnref:1" class="footnote-backref" role="doc-backlink">back</a></p>
+        </li>
+      </ol>
+    </div>`;
+
+  const markdown = htmlToMarkdown(html);
+
+  assert.equal(markdown, ["Read the paper[^1].", "", "[^1]: Paper reference"].join("\n"));
+});
+
+test("removes unsupported control characters from text and code", () => {
+  const html = `
+    <p>Visible\u0010 text</p>
+    <pre><code class="language-js">const value = "\u0010";</code></pre>`;
+
+  const markdown = htmlToMarkdown(html);
+
+  assert.equal(markdown, ["Visible text", "", "```js", 'const value = "";', "```"].join("\n"));
+});

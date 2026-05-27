@@ -296,6 +296,36 @@ test("preserves unmarked date-shaped output directories", async () => {
   assert.deepEqual(report.cleanedOutputDirs, []);
 });
 
+test("does not overwrite unmarked current output directory", async () => {
+  const root = await tempMigrationDir();
+  const sourceRoot = join(root, "source");
+  const outRoot = join(root, "out");
+  const reportPath = join(root, "report.json");
+  const existingOutputDir = join(outRoot, "demo");
+  const existingContent = "Current hand-written content.";
+
+  await mkdir(existingOutputDir, { recursive: true });
+  await writeFile(join(existingOutputDir, "index.md"), existingContent);
+  await writeCanonicalPost({
+    sourceRoot,
+    sourceDirName: "202001-demo",
+    canonicalSlug: "demo",
+  });
+
+  const report = await runMigration({
+    sourceRoot,
+    outRoot,
+    reportPath,
+    expectedCount: 1,
+  });
+  const markdown = await readFile(join(existingOutputDir, "index.md"), "utf8");
+
+  assert.equal(markdown, existingContent);
+  assert.equal(report.migratedCount, 0);
+  assert.equal(report.posts[0].generated, false);
+  assert.match(report.posts[0].blockers[0], /Refusing to overwrite unmarked output directory/);
+});
+
 test("removes marked non-date stale output directories and preserves unmarked posts", async () => {
   const root = await tempMigrationDir();
   const sourceRoot = join(root, "source");

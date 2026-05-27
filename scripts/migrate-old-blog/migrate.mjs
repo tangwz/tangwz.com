@@ -393,12 +393,15 @@ async function previousGeneratedOutputDirs({ outRoot, reportPath }) {
   }
 }
 
-async function cleanStaleOldOutputDirs({ outRoot, currentOutputDirs, reportPath }) {
+async function outputDirIsMigrationOwned(outputDir, previousOutputDirs) {
+  return (await containsMigrationMarker(outputDir)) || previousOutputDirs.has(outputDir);
+}
+
+async function cleanStaleOldOutputDirs({ outRoot, currentOutputDirs, previousOutputDirs }) {
   if (!(await exists(outRoot))) return [];
 
   const entries = await readdir(outRoot, { withFileTypes: true });
   const cleanedOutputDirs = [];
-  const previousOutputDirs = await previousGeneratedOutputDirs({ outRoot, reportPath });
 
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
@@ -406,9 +409,7 @@ async function cleanStaleOldOutputDirs({ outRoot, currentOutputDirs, reportPath 
     const outputDir = join(outRoot, entry.name);
     if (currentOutputDirs.has(outputDir)) continue;
 
-    const ownedByMarker = await containsMigrationMarker(outputDir);
-    const ownedByReport = previousOutputDirs.has(outputDir);
-    if (!ownedByMarker && !ownedByReport) continue;
+    if (!(await outputDirIsMigrationOwned(outputDir, previousOutputDirs))) continue;
 
     await rm(outputDir, { recursive: true, force: true });
     cleanedOutputDirs.push(outputDir);
@@ -441,6 +442,7 @@ export async function runMigration({ sourceRoot, outRoot, reportPath, expectedCo
   const indexResult = await readIndexRecords(sourceRoot);
   report.blockers.push(...indexResult.blockers);
   const postDirs = await discoverPostDirs(sourceRoot);
+  const previousOutputDirs = await previousGeneratedOutputDirs({ outRoot, reportPath });
   const currentOutputDirs = new Set();
   for (const postDir of postDirs) {
     currentOutputDirs.add(await outputDirForPostDir({ outRoot, postDir }));
@@ -455,12 +457,24 @@ export async function runMigration({ sourceRoot, outRoot, reportPath, expectedCo
   report.cleanedOutputDirs = await cleanStaleOldOutputDirs({
     outRoot,
     currentOutputDirs,
-    reportPath,
+    previousOutputDirs,
   });
   await mkdir(outRoot, { recursive: true });
 
   for (const postDir of postDirs) {
+    let outputDir;
+    let cleanupFailedOutput = false;
+
     try {
+      outputDir = await outputDirForPostDir({ outRoot, postDir });
+      const outputExists = await exists(outputDir);
+      const outputOwned =
+        outputExists && (await outputDirIsMigrationOwned(outputDir, previousOutputDirs));
+      if (outputExists && !outputOwned) {
+        throw new Error(`Refusing to overwrite unmarked output directory: ${outputDir}`);
+      }
+      cleanupFailedOutput = !outputExists || outputOwned;
+
       const postReport = await migratePost({
         sourceRoot,
         outRoot,
@@ -470,7 +484,9 @@ export async function runMigration({ sourceRoot, outRoot, reportPath, expectedCo
       report.posts.push(postReport);
     } catch (error) {
       const postReport = await failedPostReport({ postDir, error });
-      await rm(join(outRoot, postReport.slug), { recursive: true, force: true });
+      if (cleanupFailedOutput) {
+        await rm(outputDir ?? join(outRoot, postReport.slug), { recursive: true, force: true });
+      }
       report.posts.push(postReport);
     }
   }
