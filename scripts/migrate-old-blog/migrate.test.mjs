@@ -123,6 +123,7 @@ test("migrates canonical posts with frontmatter, markdown body, assets, and repo
   const persistedReport = JSON.parse(await readFile(reportPath, "utf8"));
 
   assert.match(markdown, /^---\ntitle: "Demo Post"\n/m);
+  assert.match(markdown, /<!-- migrated-from: https:\/\/tangwz\.com\/posts\/demo\/ -->/);
   assert.match(markdown, /ogImage: "\.\/assets\/cover\.png"/);
   assert.match(markdown, /This is a long enough body text for migration validation\./);
   assert.match(markdown, /!\[Diagram\]\(\.\/assets\/diagram\.png\)/);
@@ -240,7 +241,9 @@ test("records per-post failures and continues migrating later posts", async () =
   assert.ok(brokenPost);
   assert.ok(okPost);
   assert.match(brokenPost.blockers[0], /^Post migration failed:/);
+  assert.equal(brokenPost.generated, false);
   assert.deepEqual(okPost.blockers, []);
+  assert.equal(await pathExists(join(outRoot, "broken")), false);
   assert.equal(await pathExists(join(outRoot, "ok", "index.md")), true);
   assert.equal(await pathExists(reportPath), true);
 });
@@ -291,6 +294,49 @@ test("removes stale old-slug output directories without deleting current posts",
   assert.equal(await pathExists(staleOutputDir), false);
   assert.equal(await pathExists(join(currentOutputDir, "index.md")), true);
   assert.deepEqual(report.cleanedOutputDirs, [staleOutputDir]);
+});
+
+test("removes marked non-date stale output directories and preserves unmarked posts", async () => {
+  const root = await tempMigrationDir();
+  const sourceRoot = join(root, "source");
+  const outRoot = join(root, "out");
+  const reportPath = join(root, "report.json");
+  const markedStaleDir = join(outRoot, "old-post");
+  const unmarkedExistingDir = join(outRoot, "existing-post");
+
+  await mkdir(markedStaleDir, { recursive: true });
+  await mkdir(unmarkedExistingDir, { recursive: true });
+  await writeFile(
+    join(markedStaleDir, "index.md"),
+    [
+      "---",
+      'title: "Old Post"',
+      "---",
+      "<!-- migrated-from: https://tangwz.com/posts/old-post/ -->",
+      "",
+      "Old generated content.",
+    ].join("\n")
+  );
+  await writeFile(
+    join(unmarkedExistingDir, "index.md"),
+    ["---", 'title: "Existing Post"', "---", "", "Current hand-written content."].join("\n")
+  );
+  await writeCanonicalPost({
+    sourceRoot,
+    sourceDirName: "202001-demo",
+    canonicalSlug: "demo",
+  });
+
+  const report = await runMigration({
+    sourceRoot,
+    outRoot,
+    reportPath,
+    expectedCount: 1,
+  });
+
+  assert.equal(await pathExists(markedStaleDir), false);
+  assert.equal(await pathExists(join(unmarkedExistingDir, "index.md")), true);
+  assert.deepEqual(report.cleanedOutputDirs, [markedStaleDir]);
 });
 
 test("does not treat html-looking text inside fenced code as residual html", async () => {
