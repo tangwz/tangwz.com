@@ -46,13 +46,13 @@ Consensus != Consistency
 *   时钟问题
 *   节点故障问题
 
-[第一篇提到共识问题的文献](http://betathoughts.blogspot.com/2007/06/brief-history-of-consensus-2pc-and.html)[1](#fn:1) 来自于 lamport 的 “[Time, Clocks and the Ordering of Events in a Distributed System](http://research.microsoft.com/users/lamport/pubs/time-clocks.pdf)[2](#fn:2)"，尽管它并没有明确的提出共识(consensus)或者协商(agreement)的概念。论文阐述了在分布式系统中，你无法判断事件 A 是否发生在事件 B 之前，除非 A 和 B 存在某种依赖关系。由此还引出了分布式**状态机**的概念。
+[第一篇提到共识问题的文献](http://betathoughts.blogspot.com/2007/06/brief-history-of-consensus-2pc-and.html)[^1] 来自于 lamport 的 “[Time, Clocks and the Ordering of Events in a Distributed System](http://research.microsoft.com/users/lamport/pubs/time-clocks.pdf)[^2]"，尽管它并没有明确的提出共识(consensus)或者协商(agreement)的概念。论文阐述了在分布式系统中，你无法判断事件 A 是否发生在事件 B 之前，除非 A 和 B 存在某种依赖关系。由此还引出了分布式**状态机**的概念。
 
 在分布式系统中，共识就常常应用在这种多副本状态机（Replicated state machines），状态机在每台节点上都存有副本，这些状态机都有相同的初始状态，每次状态转变、下个状态是什么都由相关进程共同决定，每一台节点的日志的值和顺序都相同。每个状态机在“哪个状态是下一个需要处理的状态”这个问题上达成共识，这就是一个共识问题。
 
 ![Raft 算法的状态机](./assets/replicated-state-machine.jpg)
 
-最终，这些节点看起来就像一个单独的、高可靠的状态机。[Raft 的论文](https://www.usenix.org/system/files/conference/atc14/atc14-paper-ongaro.pdf)[3](#fn:3)提到，使用状态机我们就能克服上述三个问题：
+最终，这些节点看起来就像一个单独的、高可靠的状态机。[Raft 的论文](https://www.usenix.org/system/files/conference/atc14/atc14-paper-ongaro.pdf)[^3]提到，使用状态机我们就能克服上述三个问题：
 
 *   满足在所有非拜占庭条件下确保安全（不会返回错误结果），包括网络延迟、分区、丢包、重复和重排序。
 *   不依赖于时序。
@@ -95,11 +95,11 @@ Consensus != Consistency
 
 ### FLP 不可能（FLP Impossibility）
 
-早在 1985 年，Fischer、Lynch 和 Paterson （FLP）在 “[Impossibility of Distributed Consensus with One Faulty Process](https://groups.csail.mit.edu/tds/papers/Lynch/jacm85.pdf)”[4](#fn:4) 证明了：在一个**异步**系统中，即使只有一个进程出现了故障，也没有算法能**保证**达成共识。
+早在 1985 年，Fischer、Lynch 和 Paterson （FLP）在 “[Impossibility of Distributed Consensus with One Faulty Process](https://groups.csail.mit.edu/tds/papers/Lynch/jacm85.pdf)”[^4] 证明了：在一个**异步**系统中，即使只有一个进程出现了故障，也没有算法能**保证**达成共识。
 
 ![FLP 不可能（FLP Impossibility）](./assets/flp.jpg)
 
-简单来说，因为在一个异步系统中，进程可以随时发出响应，所以没有办法分辨一个进程是速度很慢还是已经崩溃，这不满足终止性（Termination）。详细的证明已经超出本文范围，不在细述[5](#fn:5)。
+简单来说，因为在一个异步系统中，进程可以随时发出响应，所以没有办法分辨一个进程是速度很慢还是已经崩溃，这不满足终止性（Termination）。详细的证明已经超出本文范围，不在细述[^5]。
 
 此时，人们意识到一个分布式共识算法需要具有的两个属性：**安全性(safety)**和**活性(liveness)**。安全性意味着所有正确的进程都认同同一个值，活性意味着分布式系统最终会认同某一个值。每个共识算法要么牺牲掉一个属性，要么放宽对网络异步的假设。
 
@@ -129,7 +129,7 @@ Consensus != Consistency
 
 但是，这种办法要求故障检测器是精确的。如果故障器不精确的话，系统可能放弃一个正常的进程；如果超时时间设定得很长，进程就需要等待（并且不能执行任何工作）较长的时间才能得出出错的结论。这个方法甚至有可能导致网络分区。
 
-解决办法是使用“不完美”的故障检测器。Chanadra 和 Toueg 在 “[The weakest failure detector for solving consensus](https://dl.acm.org/doi/10.1145/234533.234549)[6](#fn:6)” 中分析了一个故障检测器必须拥有的两个属性：
+解决办法是使用“不完美”的故障检测器。Chanadra 和 Toueg 在 “[The weakest failure detector for solving consensus](https://dl.acm.org/doi/10.1145/234533.234549)[^6]” 中分析了一个故障检测器必须拥有的两个属性：
 
 *   完全性（Completeness）：每一个故障的进程都会被每一个正确的进程怀疑。
 *   精确性（Accuracy）：正确的进程没有被怀疑。
@@ -157,15 +157,15 @@ Consensus != Consistency
 
 上述的方法 1 和 2，都想办法让系统比较“同步”。我们熟知的 Paxos 在异步系统中，由于活锁的存在，并没有完全解决共识问题（liveness不满足）。但 Paxos 被广泛应用在各种分布式系统中，就是因为在达成共识之前，系统并没有那么“异步”，还是有极大概率达成共识的。
 
-Dolev 和 Strong 在 “[Authenticated Algorithms for Byzantine Agreement](https://epubs.siam.org/doi/abs/10.1137/0212045?journalCode=smjcat)[7](#fn:7)” 证明了：**同步系统中，如果 N 个进程中最多有 f 个会出现崩溃故障，那么经过 f + 1 轮消息传递后即可达成共识。**
+Dolev 和 Strong 在 “[Authenticated Algorithms for Byzantine Agreement](https://epubs.siam.org/doi/abs/10.1137/0212045?journalCode=smjcat)[^7]” 证明了：**同步系统中，如果 N 个进程中最多有 f 个会出现崩溃故障，那么经过 f + 1 轮消息传递后即可达成共识。**
 
-Fischer 和 Lynch 的 “[A lower bound for the time to assure interactive consistency](https://www.sciencedirect.com/science/article/abs/pii/0020019082900333)[8](#fn:8)” 证明了，**该结论同样适用于拜占庭故障**。
+Fischer 和 Lynch 的 “[A lower bound for the time to assure interactive consistency](https://www.sciencedirect.com/science/article/abs/pii/0020019082900333)[^8]” 证明了，**该结论同样适用于拜占庭故障**。
 
 基于此，大多数实际应用都依赖于同步系统或部分同步系统的假设。
 
 ### 同步系统中的拜占庭将军问题
 
-Leslie Lamport、Robert Shostak 和 Marshall Pease 在 “[拜占庭将军问题（The Byzantine General’s Problem)](http://people.cs.uchicago.edu/~shanlu/teaching/33100_wi15/papers/byz.pdf)[9](#fn:9)” 论文中讨论了 3 个进程互相发送未签名（口头的）的消息，并证明了只要有一个进程出现故障，就无法满足拜占庭将军的条件。但如果使用签名的消息，那么 3 个将军中有一个出现故障，也能实现拜占庭共识。
+Leslie Lamport、Robert Shostak 和 Marshall Pease 在 “[拜占庭将军问题（The Byzantine General’s Problem)](http://people.cs.uchicago.edu/~shanlu/teaching/33100_wi15/papers/byz.pdf)[^9]” 论文中讨论了 3 个进程互相发送未签名（口头的）的消息，并证明了只要有一个进程出现故障，就无法满足拜占庭将军的条件。但如果使用签名的消息，那么 3 个将军中有一个出现故障，也能实现拜占庭共识。
 
 Pease 将这种情况推广到了 N 个进程，也就是在一个有 f 个拜占庭故障节点的系统中，必须总共至少有 3f + 1 个节点才能够达成共识。即 N >= 3f + 1。
 
@@ -173,7 +173,7 @@ Pease 将这种情况推广到了 N 个进程，也就是在一个有 f 个拜�
 
 #### PBFT 算法
 
-[PBFT(Practical Byzantine Fault Tolerance)](http://pmg.csail.mit.edu/papers/osdi99.pdf) [10](#fn:10) 算法顾名思义是一种实用的拜占庭容错算法，由 Miguel Castro 和 Barbara Liskov 发表于 1999 年。
+[PBFT(Practical Byzantine Fault Tolerance)](http://pmg.csail.mit.edu/papers/osdi99.pdf) [^10] 算法顾名思义是一种实用的拜占庭容错算法，由 Miguel Castro 和 Barbara Liskov 发表于 1999 年。
 
 算法的主要细节不再展开。PBFT 也是通过使用同步假设保证活性来绕过 FLP 不可能。PBFT 算法容错数量同样也是 N >= 3f + 1，但只需要 O(n^2 ) 信息交换量，即每台计算机都需要与网络中其他所有计算机通讯。
 
@@ -191,24 +191,22 @@ Pease 将这种情况推广到了 N 个进程，也就是在一个有 f 个拜�
 
 ## Reference
 
-* * *
+[^1]: Mark Mc Keown: “[A brief history of Consensus, 2PC and Transaction](http://betathoughts.blogspot.com/2007/06/brief-history-of-consensus-2pc-and.html)”
 
-1.  Mark Mc Keown: “[A brief history of Consensus, 2PC and Transaction](http://betathoughts.blogspot.com/2007/06/brief-history-of-consensus-2pc-and.html)” [↩︎](#fnref:1)
+[^2]: Leslie Lamport: “[Time, Clocks and the Ordering of Events in a Distributed System](http://research.microsoft.com/users/lamport/pubs/time-clocks.pdf)”
 
-2.  Leslie Lamport: “[Time, Clocks and the Ordering of Events in a Distributed System](http://research.microsoft.com/users/lamport/pubs/time-clocks.pdf)” [↩︎](#fnref:2)
+[^3]: Diego Ongaro and John Ousterhout: “[In Search of an Understandable Consensus Algorithm](https://www.usenix.org/system/files/conference/atc14/atc14-paper-ongaro.pdf)”
 
-3.  Diego Ongaro and John Ousterhout: “[In Search of an Understandable Consensus Algorithm](https://www.usenix.org/system/files/conference/atc14/atc14-paper-ongaro.pdf)” [↩︎](#fnref:3)
+[^4]: Fischer、Lynch and Paterson; “[Impossibility of Distributed Consensus with One Faulty Process](https://groups.csail.mit.edu/tds/papers/Lynch/jacm85.pdf)”
 
-4.  Fischer、Lynch and Paterson; “[Impossibility of Distributed Consensus with One Faulty Process](https://groups.csail.mit.edu/tds/papers/Lynch/jacm85.pdf)” [↩︎](#fnref:4)
+[^5]: [A Brief Tour of FLP Impossibility](http://the-paper-trail.org/blog/a-brief-tour-of-flp-impossibility/)
 
-5.  [A Brief Tour of FLP Impossibility](http://the-paper-trail.org/blog/a-brief-tour-of-flp-impossibility/) [↩︎](#fnref:5)
+[^6]: Chanadra and Toueg: “[The weakest failure detector for solving consensus](https://dl.acm.org/doi/10.1145/234533.234549)”
 
-6.  Chanadra and Toueg: “[The weakest failure detector for solving consensus](https://dl.acm.org/doi/10.1145/234533.234549)” [↩︎](#fnref:6)
+[^7]: [Authenticated Algorithms for Byzantine Agreement](https://epubs.siam.org/doi/abs/10.1137/0212045?journalCode=smjcat)
 
-7.  [Authenticated Algorithms for Byzantine Agreement](https://epubs.siam.org/doi/abs/10.1137/0212045?journalCode=smjcat) [↩︎](#fnref:7)
+[^8]: [A lower bound for the time to assure interactive consistency](https://www.sciencedirect.com/science/article/abs/pii/0020019082900333)
 
-8.  [A lower bound for the time to assure interactive consistency](https://www.sciencedirect.com/science/article/abs/pii/0020019082900333) [↩︎](#fnref:8)
+[^9]: Leslie Lamport, Robert Shostak, and Marshall Pease: “[The Byzantine General’s Problem](http://people.cs.uchicago.edu/~shanlu/teaching/33100_wi15/papers/byz.pdf)”
 
-9.  Leslie Lamport, Robert Shostak, and Marshall Pease: “[The Byzantine General’s Problem](http://people.cs.uchicago.edu/~shanlu/teaching/33100_wi15/papers/byz.pdf)” [↩︎](#fnref:9)
-
-10.  [Practical Byzantine Fault Tolerance](http://pmg.csail.mit.edu/papers/osdi99.pdf) [↩︎](#fnref:10)
+[^10]: [Practical Byzantine Fault Tolerance](http://pmg.csail.mit.edu/papers/osdi99.pdf)

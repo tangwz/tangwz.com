@@ -53,49 +53,29 @@ clang++ -std=c++20 -stdlib=libc++ -fcoroutines-ts
 
 ```c++
 struct ReturnObject {
-
     struct promise_type {
-
         ReturnObject get_return_object() { return {}; }
-
         std::suspend_never initial_suspend() { return {}; }
-
         std::suspend_never final_suspend() { return {}; }
-
         void unhandled_exception() {}
-
     };
-
 };
 
 struct Awaitable {
-
     std::coroutine_handle<> *hp_;
-
     constexpr bool await_ready() const noexcept { return false; }
-
     void await_suspend(std::coroutine_handle<> h) { *hp_ = h; }
-
     void await_resume() noexcept {
-
         std::cout << "Event signaled, resuming." << std::endl;
-
     }
-
 };
 
 ReturnObject counter(std::coroutine_handle<> *continuation_out) {
-
     Awaitable a{continuation_out};
-
     for (unsigned i = 0;; ++i) {
-
         co_await a;
-
         std::cout << "counter: " << i << std::endl;
-
     }
-
 }
 ```
 
@@ -123,29 +103,17 @@ C++ 协程的**返回类型**必须是 `promise_type`，`promise_type` 是一个
 
 ```c++
 {
-
    promise-type promise promise-constructor-arguments ;
-
    try {
-
       co_await promise.initial_suspend() ;
-
       <function-body>
-
    } catch ( ... ) {
-
       if (!initial-await-resume-called)
-
          throw ;
-
       promise.unhandled_exception() ;
-
    }
-
 final-suspend :
-
    co_await promise.final_suspend() ;
-
 }
 
 // coroutine 被销毁
@@ -173,7 +141,7 @@ final-suspend :
 
 第二个概念是 `Awaitable`，`Awaitable` 负责管理协程挂起时的行为。
 
-一个 Awaitable 对象可以成为 `co_await` 调用的对象。Awaitable 拥有以下方法：
+一个 Awaitable 对象可以成为 `co_await` 调用的对象。Awaitable 拥有以下方法：
 
 *   `await_ready()`：是否要挂起，如果返回 true，那么 `co_await` 就不会挂起函数；
 *   `await_resume()`：`co_await` 的返回值，通常返回空；
@@ -185,29 +153,17 @@ final-suspend :
 
 ```c++
 namespace std {
-
     struct suspend_never {
-
         constexpr bool await_ready() const noexcept { return true; }
-
         constexpr void await_suspend(coroutine_handle<>) const noexcept {}
-
         constexpr void await_resume() const noexcept {}
-
     };
-
-
 
     struct suspend_always {
-
         constexpr bool await_ready() const noexcept { return false; }
-
         constexpr void await_suspend(coroutine_handle<>) const noexcept {}
-
         constexpr void await_resume() const noexcept {}
-
     };
-
 }
 ```
 
@@ -230,65 +186,41 @@ namespace std {
 
 ```c++
 #include <coroutine>
-
 #include <iostream>
 
 struct HelloCoroutine {
-
     struct HelloPromise {
-
         HelloCoroutine get_return_object() {
-
             return std::coroutine_handle<HelloPromise>::from_promise(*this);
-
         }
-
         std::suspend_never initial_suspend() { return {}; }
-
         // 在 final_suspend() 挂起了协程，所以要手动 destroy
-
         std::suspend_always final_suspend() { return {}; }
-
         void unhandled_exception() {}
-
     };
 
     using promise_type = HelloPromise;
-
     HelloCoroutine(std::coroutine_handle<HelloPromise> h) : handle(h) {}
 
     std::coroutine_handle<HelloPromise> handle;
-
 };
 
 HelloCoroutine hello() {
-
     std::cout << "Hello " << std::endl;
-
     co_await std::suspend_always{};
-
     std::cout << "world!" << std::endl;
-
 }
 
 int main() {
-
     HelloCoroutine coro = hello();
 
-
-
     std::cout << "calling resume" << std::endl;
-
     coro.handle.resume();
 
-
-
     std::cout << "destroy" << std::endl;
-
     coro.handle.destroy();
 
     return 0;
-
 }
 ```
 
@@ -316,73 +248,50 @@ co_await promise.yield_value(<expression>);
 
 ```c++
 #include <coroutine>
-
 #include <iostream>
-
 #include <string_view>
 
 struct HelloCoroutine {
-
     struct HelloPromise {
-
         std::string_view value_;
 
         HelloCoroutine get_return_object() {
-
             return std::coroutine_handle<HelloPromise>::from_promise(*this);
-
         }
-
         std::suspend_never initial_suspend() { return {}; }
-
         std::suspend_always final_suspend() { return {}; }
-
         void unhandled_exception() {}
 
         std::suspend_always yield_value(std::string_view value) {
-
             value_ = value;
-
             std::cout << value_ << std::endl;
-
             return {};
-
         }
-
     };
 
     using promise_type = HelloPromise;
-
     HelloCoroutine(std::coroutine_handle<HelloPromise> h) : handle(h) {}
 
     std::coroutine_handle<HelloPromise> handle;
-
 };
 
 HelloCoroutine hello() {
-
     std::string_view s = "Hello ";
-
     co_yield s;
 
     std::cout << "world" << std::endl;
-
 }
 
 int main() {
-
     HelloCoroutine coro = hello();
 
     std::cout << "calling resume" << std::endl;
-
     coro.handle.resume();
 
     std::cout << "destroy" << std::endl;
-
     coro.handle.destroy();
 
     return 0;
-
 }
 ```
 
@@ -406,67 +315,44 @@ co_return promise.return_value(<expression>); goto end;
 
 ```c++
 #include <coroutine>
-
 #include <iostream>
 
 struct HelloCoroutine {
-
     struct HelloPromise {
-
         HelloCoroutine get_return_object() {
-
             return std::coroutine_handle<HelloPromise>::from_promise(*this);
-
         }
-
         std::suspend_never initial_suspend() { return {}; }
-
         std::suspend_always final_suspend() { return {}; }
-
         void unhandled_exception() {}
 
         void return_value(int value) {
-
             std::cout << "got co_return value " << value << std::endl;
-
         }
-
     };
 
     using promise_type = HelloPromise;
-
     HelloCoroutine(std::coroutine_handle<HelloPromise> h) : handle(h) {}
 
     std::coroutine_handle<HelloPromise> handle;
-
 };
 
 HelloCoroutine hello() {
-
     std::cout << "Hello " << std::endl;
-
     co_await std::suspend_always{};
-
     std::cout << "world!" << std::endl;
-
     co_return 42;
-
 }
 
 int main() {
-
     HelloCoroutine coro = hello();
-
     std::cout << "calling resume" << std::endl;
 
     coro.handle.resume();
-
     std::cout << "destroy" << std::endl;
-
     coro.handle.destroy();
 
     return 0;
-
 }
 ```
 
@@ -478,91 +364,48 @@ int main() {
 
 ```c++
 #include <coroutine>
-
 #include <iostream>
-
 #include <stdexcept>
-
 #include <thread>
 
-
-
 auto switch_to_new_thread(std::jthread& out) {
-
   struct awaitable {
-
     std::jthread* p_out;
-
     bool await_ready() { return false; }
-
     void await_suspend(std::coroutine_handle<> h) {
-
       std::jthread& out = *p_out;
-
       if (out.joinable())
-
         throw std::runtime_error("Output jthread parameter not empty");
-
       out = std::jthread([h] { h.resume(); });
-
       // Potential undefined behavior: accessing potentially destroyed *this
-
       // std::cout << "New thread ID: " << p_out->get_id() << '\n';
-
       std::cout << "New thread ID: " << out.get_id() << '\n'; // this is OK
-
     }
-
     void await_resume() {}
-
   };
-
   return awaitable{&out};
-
 }
-
-
 
 struct task{
-
   struct promise_type {
-
     task get_return_object() { return {}; }
-
     std::suspend_never initial_suspend() { return {}; }
-
     std::suspend_never final_suspend() noexcept { return {}; }
-
     void return_void() {}
-
     void unhandled_exception() {}
-
   };
-
 };
 
-
-
 task resuming_on_new_thread(std::jthread& out) {
-
   std::cout << "Coroutine started on thread: " << std::this_thread::get_id() << '\n';
-
   co_await switch_to_new_thread(out);
-
   // awaiter destroyed here
-
   std::cout << "Coroutine resumed on thread: " << std::this_thread::get_id() << '\n';
-
 }
 
-
-
 int main() {
-
   std::jthread out;
-
   resuming_on_new_thread(out);
-
 }
 ```
 
@@ -572,7 +415,7 @@ int main() {
 
 ![](https://i.loli.net/2021/03/06/9om1brcaIDQl374.jpg)
 
-我不是编程语言专家，对于 C++ 也没有很深入的研究，C++ 在万众期待下终于支持了协程，但用了一下发现，C++ 的协程显得有些繁琐、怪异，或许是我不清楚 C++ 在原有情况下支持协程的困难，但我依然觉得 C++ 团队可以做得更好。
+我不是编程语言专家，对于 C++ 也没有很深入的研究，C++ 在万众期待下终于支持了协程，但用了一下发现，C++ 的协程显得有些繁琐、怪异，或许是我不清楚 C++ 在原有情况下支持协程的困难，但我依然觉得 C++ 团队可以做得更好。
 
 我本人确实还没明白到底该如何在项目中使用这臃肿的协程。
 

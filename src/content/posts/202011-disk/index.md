@@ -16,7 +16,7 @@ draft: false
 
 ## 硬盘的物理特性
 
-硬盘（Hard Disk Drive，HDD，有时为了与固态硬盘相区分称“机械硬盘”）是计算机最基础的**非易失性存储**，它在平整的磁性表面存储和检索数据，数据通过离磁性表面很近的磁头由电磁流来**改变极性的方式**被写入到磁盘上。数据可以通过盘片被读取，原理是磁头经过盘片的上方时盘片本身的磁场导致读取线圈中电气信号改变[1](#fn:1)。
+硬盘（Hard Disk Drive，HDD，有时为了与固态硬盘相区分称“机械硬盘”）是计算机最基础的**非易失性存储**，它在平整的磁性表面存储和检索数据，数据通过离磁性表面很近的磁头由电磁流来**改变极性的方式**被写入到磁盘上。数据可以通过盘片被读取，原理是磁头经过盘片的上方时盘片本身的磁场导致读取线圈中电气信号改变[^1]。
 
 硬盘主要包括一至数片高速转动的盘片(platter)以及放在传动手臂上的读写磁头(read–write head)，每个盘片都有两面，都可记录信息，因此也会相对应每个盘片有 2 个磁头。物理结构如下图所示：
 
@@ -44,7 +44,7 @@ _——图源自《数据库系统概念》_
 
 ![access\_time](./assets/access_time.png)
 
-值得一提的是，硬盘的趋势是传输速率相当快，因为硬盘制造商擅长将更多位填塞到同一表面。但驱动器的机械方面与寻道相关（传动手臂速度和旋转速度），改善相当缓慢[2](#fn:2)。因此，为了摊销 I/O 成本，**必须在寻道之间传输尽可能多的数据**。
+值得一提的是，硬盘的趋势是传输速率相当快，因为硬盘制造商擅长将更多位填塞到同一表面。但驱动器的机械方面与寻道相关（传动手臂速度和旋转速度），改善相当缓慢[^2]。因此，为了摊销 I/O 成本，**必须在寻道之间传输尽可能多的数据**。
 
 ## 操作系统中的硬盘
 
@@ -54,7 +54,7 @@ _——图源自《数据库系统概念》_
 
 ![linux-storage](./assets/linux-storage.png)
 
-一个具体的读流程[3](#fn:3)：
+一个具体的读流程[^3]：
 
 1.  系统调用 `read（）` 会触发相应的 VFS（Virtual Filesystem Switch）函数，传递参数有文件描述符和文件偏移量；
 2.  VFS 确定请求的数据是否已经在内存缓存中；若数据不在内存中，内核需要通过块设备层从物理设备上读取数据；
@@ -79,14 +79,14 @@ VFS 为多种不同的文件系统提供一个通用的接口，通常包含四�
 
 ### Page Cache
 
-> Linux 2.2版本之前内核同时有 `Page Cache` 和 `Buffer Cache` 两个 cache，到了 2.4 版本后这两个 cache 被合在了一起，现在内核只有 `Page Cache`[4](#fn:4)
+> Linux 2.2版本之前内核同时有 `Page Cache` 和 `Buffer Cache` 两个 cache，到了 2.4 版本后这两个 cache 被合在了一起，现在内核只有 `Page Cache`[^4]
 
 倘若没有任何缓存的情况下：
 
 *   对于打开文件，每次都需要对目录层次结构中的每个级别至少进行两次读取（一次读取相关目录的 inode，并且至少有一次读取其数据）。
-*   我们要创建一个新的文件，至少需的 I/O 有：一次查找空闲的 inode，一次写入 inode 的存储（将其标记为已分配），一次写入新的 inode 本身（初始化它），一次写入目录的数据，一次读写目录的 inode 以便更新它，最后一次写入真正的数据块——**所有这些只是为了创建一个文件！**[5](#fn:5)
+*   我们要创建一个新的文件，至少需的 I/O 有：一次查找空闲的 inode，一次写入 inode 的存储（将其标记为已分配），一次写入新的 inode 本身（初始化它），一次写入目录的数据，一次读写目录的 inode 以便更新它，最后一次写入真正的数据块——**所有这些只是为了创建一个文件！**[^5]
 
-Page Cache 位于 VFS 和文件系统之间[6](#fn:6)，在内存中保存常用的块，如果所需的页面已经存在，则根本不需要调用文件系统代码。第一次打开可能会产生很多 I/O 来读取目录的 inode 和数据，但是根据局部性原理，大部分时候会命中缓存。
+Page Cache 位于 VFS 和文件系统之间[^6]，在内存中保存常用的块，如果所需的页面已经存在，则根本不需要调用文件系统代码。第一次打开可能会产生很多 I/O 来读取目录的 inode 和数据，但是根据局部性原理，大部分时候会命中缓存。
 
 如果写入数据，则首先将其写入 Page Cache，然后作为脏页（dirty pages）进行管理，这些脏页会定期（也会与系统调用 `sync` 或 `fsync` 一起）传输到存储设备。这里也常被称为写缓冲（write buffering），主要有以下三个好处：
 
@@ -124,7 +124,7 @@ I/O 调度后的请求会交给相应的设备驱动程序去进行读写，驱�
 
 ### 追加写
 
-Google BigTable [7](#fn:7)的论文把 LSM-Tree（Log Structured-Merge Tree）[8](#fn:8) 这个古老的数据结构带回前沿，基于 LSM-Tree 的存储引擎有：Leveldb、Rocksdb、HBase、Cassandra 等等。不同于传统的 B 树类存储引擎，基于 LSM-Tree 的存储引擎尤其适合写多读少的场景。
+Google BigTable [^7]的论文把 LSM-Tree（Log Structured-Merge Tree）[^8] 这个古老的数据结构带回前沿，基于 LSM-Tree 的存储引擎有：Leveldb、Rocksdb、HBase、Cassandra 等等。不同于传统的 B 树类存储引擎，基于 LSM-Tree 的存储引擎尤其适合写多读少的场景。
 
 当一个写请求到达时，它会被写到 memtable 中，memtable 在内存里维护一个平衡二叉树或者跳表来保持 key 有序（memtable 同时会写 WAL 来备份数据到磁盘，以便崩溃恢复），当 memtable 达到既定规模时，就会转换为 immutable memtable（不可变 memtable，顾名思义，只读的），然后后台进程会将 immutable memtable 压缩成 SSTable(Sorted String Table，即有序的) 写到磁盘。
 
@@ -145,31 +145,29 @@ Google BigTable [7](#fn:7)的论文把 LSM-Tree（Log Structured-Merge Tree）[8
 *   将小文件合并为大文件
 *   优化元数据存储和管理
 
-Google File System[9](#fn:9) 和 Facebook Haystack[10](#fn:10) 是两个典型的案例：
+Google File System[^9] 和 Facebook Haystack[^10] 是两个典型的案例：
 
 *   GFS 选择了当时看来相当大的 64M 作为数据存储的基本单位，就是为了减少大量元数据；
 *   Facebook Haystack 同样将小文件集合成大文件来减少了元数据数目；同时精简元数据，去掉一切 Facebook 场景中不需要的元数据，压缩元信息到足够小并全部加载到内存中，避免请求 inode 带来的开销。
 
 ## Reference
 
-* * *
+[^1]: [https://en.wikipedia.org/wiki/Disk\_storage](https://en.wikipedia.org/wiki/Disk_storage)
 
-1.  [https://en.wikipedia.org/wiki/Disk\_storage](https://en.wikipedia.org/wiki/Disk_storage) [↩︎](#fnref:1)
+[^2]: “[Hardware Technology Trends and Database Opportunities](https://people.eecs.berkeley.edu/~pattrsn/talks/sigmod98-keynote-color.pdf)” David A.PattersonKeynote Lecture at the ACM SIGMOD Conference (SIGMOD ’98) June, 1998
 
-2.  “[Hardware Technology Trends and Database Opportunities](https://people.eecs.berkeley.edu/~pattrsn/talks/sigmod98-keynote-color.pdf)” David A.PattersonKeynote Lecture at the ACM SIGMOD Conference (SIGMOD ’98) June, 1998 [↩︎](#fnref:2)
+[^3]: [https://www.ilinuxkernel.com/files/Linux.Generic.Block.Layer.pdf](https://www.ilinuxkernel.com/files/Linux.Generic.Block.Layer.pdf)
 
-3.  [https://www.ilinuxkernel.com/files/Linux.Generic.Block.Layer.pdf](https://www.ilinuxkernel.com/files/Linux.Generic.Block.Layer.pdf) [↩︎](#fnref:3)
+[^4]: [https://books.google.de/books?id=lZpW6xmXrzoC&pg=PA348&dq=linux+buffer+cache+page+cache&cd=1#v=onepage&q=linux%20buffer%20cache%20page%20cache&f=false](https://books.google.de/books?id=lZpW6xmXrzoC&pg=PA348&dq=linux+buffer+cache+page+cache&cd=1#v=onepage&q=linux%20buffer%20cache%20page%20cache&f=false)
 
-4.  [https://books.google.de/books?id=lZpW6xmXrzoC&pg=PA348&dq=linux+buffer+cache+page+cache&cd=1#v=onepage&q=linux%20buffer%20cache%20page%20cache&f=false](https://books.google.de/books?id=lZpW6xmXrzoC&pg=PA348&dq=linux+buffer+cache+page+cache&cd=1#v=onepage&q=linux%20buffer%20cache%20page%20cache&f=false) [↩︎](#fnref:4)
+[^5]: “[Operating Systems: Three Easy Pieces](http://pages.cs.wisc.edu/~remzi/OSTEP/file-implementation.pdf)” Peter Reiher
 
-5.  “[Operating Systems: Three Easy Pieces](http://pages.cs.wisc.edu/~remzi/OSTEP/file-implementation.pdf)” Peter Reiher [↩︎](#fnref:5)
+[^6]: “[The future of the page cache](https://lwn.net/Articles/712467/)”
 
-6.  “[The future of the page cache](https://lwn.net/Articles/712467/)” [↩︎](#fnref:6)
+[^7]: “[Bigtable:A distributed storage system for structured data](https://static.googleusercontent.com/media/research.google.com/zh-CN//archive/bigtable-osdi06.pdf)” Chang F;Dean J;Ghemawat S;Hsieh WC,Wallach DA,Burrows M,Chandra T,Fikes A,Gruber RE, 2006
 
-7.  “[Bigtable:A distributed storage system for structured data](https://static.googleusercontent.com/media/research.google.com/zh-CN//archive/bigtable-osdi06.pdf)” Chang F;Dean J;Ghemawat S;Hsieh WC,Wallach DA,Burrows M,Chandra T,Fikes A,Gruber RE, 2006 [↩︎](#fnref:7)
+[^8]: Patrick O’Neil, Edward Cheng, Dieter Gawlick, and Elizabeth O’Neil, [The Log-Structured Merge-Tree](https://www.cs.umb.edu/~poneil/lsmtree.pdf). Acta Informatica 33, June 1996.
 
-8.  Patrick O’Neil, Edward Cheng, Dieter Gawlick, and Elizabeth O’Neil, [The Log-Structured Merge-Tree](https://www.cs.umb.edu/~poneil/lsmtree.pdf). Acta Informatica 33, June 1996. [↩︎](#fnref:8)
+[^9]: Ghemawat, S., Gobioff, H., and Leung, S.-T. 2003. [The Google file system](https://static.googleusercontent.com/media/research.google.com/zh-CN//archive/gfs-sosp2003.pdf) In 19th Symposium on Operating Systems Principles. Lake George, NY. 29-43.
 
-9.  Ghemawat, S., Gobioff, H., and Leung, S.-T. 2003. [The Google file system](https://static.googleusercontent.com/media/research.google.com/zh-CN//archive/gfs-sosp2003.pdf) In 19th Symposium on Operating Systems Principles. Lake George, NY. 29-43. [↩︎](#fnref:9)
-
-10.  Beaver D, Kumar S, Li HC, Sobel J, Vajgel P et al (2010) Finding a needle in [haystack: facebook’s photo storage](https://www.usenix.org/legacy/event/osdi10/tech/full_papers/Beaver.pdf). In OSDI, vol 10. pp 1–8 [↩︎](#fnref:10)
+[^10]: Beaver D, Kumar S, Li HC, Sobel J, Vajgel P et al (2010) Finding a needle in [haystack: facebook’s photo storage](https://www.usenix.org/legacy/event/osdi10/tech/full_papers/Beaver.pdf). In OSDI, vol 10. pp 1–8
