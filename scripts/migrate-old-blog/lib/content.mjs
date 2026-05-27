@@ -126,12 +126,16 @@ function removeGeneratedNodes($) {
 
   $("h1, h2, h3, h4, h5, h6").each((_, heading) => {
     $(heading)
-      .children("a")
+      .find("a")
       .filter((__, anchor) => {
         const href = $(anchor).attr("href") ?? "";
         const ariaHidden = $(anchor).attr("aria-hidden") === "true";
         const className = $(anchor).attr("class") ?? "";
-        return href.startsWith("#") && (ariaHidden || /\banchor\b/.test(className));
+        const text = normalizeWhitespace($(anchor).text());
+        return (
+          href.startsWith("#") &&
+          (ariaHidden || /\banchor\b/.test(className) || text === "#")
+        );
       })
       .remove();
   });
