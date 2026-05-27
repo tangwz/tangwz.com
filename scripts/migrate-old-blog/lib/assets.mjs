@@ -1,5 +1,15 @@
 import { access, copyFile, mkdir } from "node:fs/promises";
-import { basename, dirname, extname, join, parse } from "node:path";
+import {
+  basename,
+  dirname,
+  extname,
+  isAbsolute,
+  join,
+  parse,
+  relative,
+  resolve,
+  sep,
+} from "node:path";
 
 const RESIZE_DERIVATIVE_PATTERN = /_hu[0-9a-f]+_\d+x\d+_resize(?:_[^.]+)*\.[^.]+$/i;
 
@@ -16,35 +26,53 @@ function normalizeImagePath(imageUrl, postSlug) {
   const value = String(imageUrl ?? "").trim();
   if (!value) return "";
 
+  let pathName = "";
   try {
     const url = new URL(value);
     if (url.hostname !== "tangwz.com") return "";
-    return url.pathname;
+    pathName = url.pathname;
   } catch {
     if (value.startsWith("/")) {
-      return value.split(/[?#]/, 1)[0];
+      pathName = value.split(/[?#]/, 1)[0];
+    } else {
+      const relativePath = value.split(/[?#]/, 1)[0].replace(/^\.?\//, "");
+      pathName = `/posts/${postSlug}/${relativePath}`;
     }
   }
 
-  return `/posts/${postSlug}/${value.split(/[?#]/, 1)[0].replace(/^\.?\//, "")}`;
+  try {
+    return decodeURIComponent(pathName);
+  } catch {
+    return "";
+  }
+}
+
+function isInsideDir(parentDir, targetPath) {
+  const child = relative(parentDir, targetPath);
+  return child !== "" && child !== ".." && !child.startsWith(`..${sep}`) && !isAbsolute(child);
 }
 
 function sourcePathForImage({ sourceRoot, postSlug, imagePath }) {
   const expectedPrefix = `/posts/${postSlug}/`;
   if (!imagePath.startsWith(expectedPrefix)) return "";
 
-  const relativePath = imagePath.slice(1);
-  return join(sourceRoot, relativePath);
+  const postSourceDir = resolve(sourceRoot, "posts", postSlug);
+  const sourcePath = resolve(sourceRoot, imagePath.slice(1));
+  if (!isInsideDir(postSourceDir, sourcePath)) return "";
+
+  return sourcePath;
 }
 
-function collisionFreeName(fileName, usedNames) {
-  if (!usedNames.has(fileName)) return fileName;
+async function collisionFreeName(fileName, usedNames, outputAssetDir) {
+  if (!usedNames.has(fileName) && !(await exists(join(outputAssetDir, fileName)))) {
+    return fileName;
+  }
 
   const parsed = parse(fileName);
   let index = 2;
   let candidate = `${parsed.name}-${index}${parsed.ext}`;
 
-  while (usedNames.has(candidate)) {
+  while (usedNames.has(candidate) || (await exists(join(outputAssetDir, candidate)))) {
     index += 1;
     candidate = `${parsed.name}-${index}${parsed.ext}`;
   }
@@ -95,8 +123,9 @@ export async function copyReferencedAsset({
     return { ...previousCopy, reused: true };
   }
 
-  const outputName = collisionFreeName(basename(copiedFrom), usedNames);
-  const copiedTo = join(outputPostDir, "assets", outputName);
+  const outputAssetDir = join(outputPostDir, "assets");
+  const outputName = await collisionFreeName(basename(copiedFrom), usedNames, outputAssetDir);
+  const copiedTo = join(outputAssetDir, outputName);
   const markdownPath = `./assets/${outputName}`;
 
   await mkdir(dirname(copiedTo), { recursive: true });
