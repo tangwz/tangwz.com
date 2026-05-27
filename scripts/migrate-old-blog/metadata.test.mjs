@@ -59,12 +59,7 @@ test("uses index json fallback when html metadata is incomplete", () => {
   assert.equal(metadata.description, "Fallback summary");
   assert.deepEqual(metadata.tags, ["others"]);
   assert.equal(metadata.canonicalURL, "https://tangwz.com/posts/fallback/");
-  assert.deepEqual(metadata.fallbacks.sort(), [
-    "description",
-    "pubDatetime",
-    "tags",
-    "title",
-  ]);
+  assert.deepEqual(metadata.fallbacks, ["title", "pubDatetime", "description", "tags"]);
 });
 
 test("uses html title fallback and strips site title separators", () => {
@@ -73,6 +68,38 @@ test("uses html title fallback and strips site title separators", () => {
   const metadata = extractMetadata(load(html), new Map(), "/posts/demo/");
 
   assert.equal(metadata.title, "Demo Title");
+});
+
+test("extracts blog posting metadata from json-ld graph and description", () => {
+  const html = `
+    <html>
+      <head>
+        <script type="application/ld+json">
+          {
+            "@graph": [
+              {
+                "@type": "BreadcrumbList",
+                "name": "Navigation"
+              },
+              {
+                "@type": ["CreativeWork", "BlogPosting"],
+                "headline": "Graph Title",
+                "datePublished": "2022-03-04T05:06:07+00:00",
+                "description": "Description from graph",
+                "keywords": "migration, metadata"
+              }
+            ]
+          }
+        </script>
+      </head>
+    </html>`;
+
+  const metadata = extractMetadata(load(html), new Map(), "/posts/graph/");
+
+  assert.equal(metadata.title, "Graph Title");
+  assert.equal(metadata.pubDatetime, "2022-03-04T05:06:07+00:00");
+  assert.equal(metadata.description, "Description from graph");
+  assert.deepEqual(metadata.tags, ["migration", "metadata"]);
 });
 
 test("serializes frontmatter with stable field order", () => {
@@ -104,5 +131,63 @@ test("serializes frontmatter with stable field order", () => {
       "---",
       "",
     ].join("\n")
+  );
+});
+
+test("serializes frontmatter strings with special characters", () => {
+  const yaml = toFrontmatter({
+    title: 'Quote "Title": Demo',
+    pubDatetime: "2020-09-29T00:00:00+00:00",
+    description: "Line one\nLine two: value",
+    tags: ["c++", "key:value", 'quote"tag'],
+    canonicalURL: "https://tangwz.com/posts/demo/",
+    draft: false,
+    fallbacks: [],
+  });
+
+  assert.equal(
+    yaml,
+    [
+      "---",
+      'title: "Quote \\"Title\\": Demo"',
+      "pubDatetime: 2020-09-29T00:00:00+00:00",
+      'description: "Line one\\nLine two: value"',
+      "tags:",
+      '  - "c++"',
+      '  - "key:value"',
+      '  - "quote\\"tag"',
+      'canonicalURL: "https://tangwz.com/posts/demo/"',
+      "draft: false",
+      "---",
+      "",
+    ].join("\n")
+  );
+});
+
+test("throws before serializing frontmatter with missing required metadata", () => {
+  assert.throws(
+    () =>
+      toFrontmatter({
+        title: " ",
+        pubDatetime: "2020-09-29T00:00:00+00:00",
+        description: "Summary",
+        tags: ["distributed"],
+        draft: false,
+        fallbacks: [],
+      }),
+    /Missing required metadata: title/
+  );
+
+  assert.throws(
+    () =>
+      toFrontmatter({
+        title: "Demo Title",
+        pubDatetime: undefined,
+        description: "",
+        tags: ["distributed"],
+        draft: false,
+        fallbacks: [],
+      }),
+    /Missing required metadata: pubDatetime, description/
   );
 });

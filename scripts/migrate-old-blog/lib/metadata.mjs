@@ -20,7 +20,8 @@ function jsonLdEntries(value) {
 
 function isArticle(entry) {
   const type = entry?.["@type"];
-  return type === "Article" || (Array.isArray(type) && type.includes("Article"));
+  const types = Array.isArray(type) ? type : [type];
+  return types.includes("Article") || types.includes("BlogPosting");
 }
 
 function firstArticleJsonLd($) {
@@ -70,6 +71,16 @@ function yamlString(value) {
   return JSON.stringify(String(value ?? ""));
 }
 
+function assertRequiredMetadata(metadata) {
+  const missing = ["title", "pubDatetime", "description"].filter(
+    field => !cleanText(metadata[field])
+  );
+
+  if (missing.length > 0) {
+    throw new Error(`Missing required metadata: ${missing.join(", ")}`);
+  }
+}
+
 export function extractMetadata($, indexRecords, permalink) {
   const article = firstArticleJsonLd($);
   const fallback = indexRecords.get(permalink) ?? {};
@@ -98,6 +109,7 @@ export function extractMetadata($, indexRecords, permalink) {
   let description =
     metaContent($, 'meta[property="og:description"]') ||
     cleanText(article.abstract) ||
+    cleanText(article.description) ||
     metaContent($, 'meta[name="description"]');
   if (!description && fallback.summary) {
     description = cleanText(fallback.summary);
@@ -129,6 +141,8 @@ export function extractMetadata($, indexRecords, permalink) {
 }
 
 export function toFrontmatter(metadata) {
+  assertRequiredMetadata(metadata);
+
   const lines = [
     "---",
     `title: ${yamlString(metadata.title)}`,
