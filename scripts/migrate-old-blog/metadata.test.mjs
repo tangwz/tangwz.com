@@ -102,6 +102,21 @@ test("extracts blog posting metadata from json-ld graph and description", () => 
   assert.deepEqual(metadata.tags, ["migration", "metadata"]);
 });
 
+test("removes generated heading anchors from descriptions", () => {
+  const html = `
+    <html>
+      <head>
+        <meta property="og:title" content="Demo Title" />
+        <meta property="og:description" content="Intro # Body text" />
+        <meta property="article:published_time" content="2020-09-29T00:00:00+00:00" />
+      </head>
+    </html>`;
+
+  const metadata = extractMetadata(load(html), new Map(), "/posts/demo/");
+
+  assert.equal(metadata.description, "Intro Body text");
+});
+
 test("serializes frontmatter with stable field order", () => {
   const yaml = toFrontmatter({
     title: "Demo Title",
