@@ -1,19 +1,13 @@
 import { load } from "cheerio";
 import TurndownService from "turndown";
 
-const ARTICLE_BODY_SELECTORS = [
-  "article .min-w-0.min-h-0.max-w-prose",
-  "article .max-w-prose",
-  "article",
-];
+const EXACT_ARTICLE_BODY_SELECTOR = "article .min-w-0.min-h-0.max-w-prose";
+const PROSE_ARTICLE_BODY_SELECTOR = "article .max-w-prose";
 
 const GENERATED_SELECTORS = [
   "script",
   "style",
   "noscript",
-  "details",
-  "footer",
-  "nav",
   "[data-pagefind-body]",
   "[data-pagefind-ignore]",
 ];
@@ -30,12 +24,46 @@ const STYLE_ARTIFACT_ATTRIBUTES = [
 ];
 
 function firstArticleBody($) {
-  for (const selector of ARTICLE_BODY_SELECTORS) {
-    const match = $(selector).first();
-    if (match.length > 0) return match;
+  const exactMatches = $(EXACT_ARTICLE_BODY_SELECTOR).toArray();
+  if (exactMatches.length > 0) {
+    return mostContentRich($, exactMatches);
+  }
+
+  const proseMatches = $(PROSE_ARTICLE_BODY_SELECTOR).toArray();
+  if (proseMatches.length > 0) {
+    return mostContentRich($, proseMatches);
+  }
+
+  const articleMatches = $("article").toArray();
+  if (articleMatches.length > 0) {
+    return mostContentRich($, articleMatches);
   }
 
   return $("body").first();
+}
+
+function contentScore($, node) {
+  const element = $(node);
+  const textScore = element.text().replace(/\s+/g, " ").trim().length;
+  const mediaScore = element.find("img, pre").length * 200;
+  const blockScore = element.find("p, blockquote, ul, ol, table, details").length * 50;
+  return textScore + mediaScore + blockScore;
+}
+
+function mostContentRich($, nodes) {
+  const [firstNode] = nodes;
+  let bestNode = firstNode;
+  let bestScore = contentScore($, firstNode);
+
+  for (const node of nodes.slice(1)) {
+    const score = contentScore($, node);
+    if (score > bestScore) {
+      bestNode = node;
+      bestScore = score;
+    }
+  }
+
+  return $(bestNode);
 }
 
 function normalizeWhitespace(value) {
@@ -46,8 +74,55 @@ function normalizeWhitespace(value) {
     .trim();
 }
 
+function normalizeCodeText(value) {
+  return String(value ?? "")
+    .replace(/\u00a0/g, " ")
+    .replace(/\r\n?/g, "\n")
+    .replace(/^\n+/, "")
+    .replace(/\n+$/, "");
+}
+
+function attributeText($, node) {
+  return ["class", "id", "role", "aria-label", "data-toc"]
+    .map(attr => $(node).attr(attr) ?? "")
+    .join(" ");
+}
+
+function hasTocMarker($, node) {
+  return /\b(?:toc|table[-\s]?of[-\s]?contents|contents)\b/i.test(attributeText($, node));
+}
+
+function allLinksAreLocalAnchors($, node) {
+  const links = $(node).find("a[href]").toArray();
+  return links.length > 0 && links.every(link => ($(link).attr("href") ?? "").startsWith("#"));
+}
+
+function isGeneratedDetails($, node) {
+  const summaryText = normalizeWhitespace($(node).children("summary").first().text());
+  return (
+    hasTocMarker($, node) ||
+    /\b(?:toc|table[-\s]?of[-\s]?contents|contents)\b/i.test(summaryText) ||
+    allLinksAreLocalAnchors($, node)
+  );
+}
+
+function isGeneratedNav($, node) {
+  return hasTocMarker($, node) || allLinksAreLocalAnchors($, node);
+}
+
+function isGeneratedFooter($, node) {
+  const text = normalizeWhitespace($(node).text());
+  return (
+    hasTocMarker($, node) ||
+    /\b(?:published by|powered by|copyright|all rights reserved)\b/i.test(text)
+  );
+}
+
 function removeGeneratedNodes($) {
   $(GENERATED_SELECTORS.join(",")).remove();
+  $("details").filter((_, node) => isGeneratedDetails($, node)).remove();
+  $("nav").filter((_, node) => isGeneratedNav($, node)).remove();
+  $("footer").filter((_, node) => isGeneratedFooter($, node)).remove();
 
   $("h1, h2, h3, h4, h5, h6").each((_, heading) => {
     $(heading)
@@ -87,13 +162,10 @@ function cleanCodeBlocks($) {
         .find(className => className.startsWith("language-"))
         ?.replace(/^language-/, "");
 
-    const lines = codeNode
-      .find(".line")
-      .toArray()
-      .map(line => $(line).text())
-      .filter(line => line.trim().length > 0);
+    const lineNodes = codeNode.find(".line").toArray();
+    const lines = lineNodes.map(line => $(line).text());
     const rawCode = lines.length > 0 ? lines.join("\n") : codeNode.text();
-    const code = normalizeWhitespace(rawCode);
+    const code = normalizeCodeText(rawCode);
 
     codeNode.empty().text(code);
     codeNode.removeAttr("class");
@@ -160,7 +232,7 @@ turndown.addRule("fencedCodeBlockWithDataLang", {
   replacement(_content, node) {
     const codeNode = node.firstChild;
     const language = codeLanguage(codeNode);
-    const code = normalizeWhitespace(codeNode.textContent);
+    const code = normalizeCodeText(codeNode.textContent);
     return `\n\n\`\`\`${language}\n${code}\n\`\`\`\n\n`;
   },
 });
