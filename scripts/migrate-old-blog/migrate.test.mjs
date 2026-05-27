@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -7,6 +7,55 @@ import { runMigration } from "./migrate.mjs";
 
 async function tempMigrationDir() {
   return mkdtemp(join(tmpdir(), "old-blog-migrate-"));
+}
+
+async function pathExists(path) {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function writeCanonicalPost({
+  sourceRoot,
+  sourceDirName,
+  canonicalSlug,
+  bodyHtml = "<p>This is a long enough body text for migration validation.</p>",
+  extraHeadHtml = "",
+}) {
+  const postSourceDir = join(sourceRoot, "posts", sourceDirName);
+  await mkdir(postSourceDir, { recursive: true });
+  await writeFile(
+    join(postSourceDir, "index.html"),
+    `
+      <html>
+        <head>
+          <title>${canonicalSlug} - Site</title>
+          <meta property="og:description" content="Summary for ${canonicalSlug}" />
+          <link rel="canonical" href="https://tangwz.com/posts/${canonicalSlug}/" />
+          <script type="application/ld+json">
+            {
+              "@type": "BlogPosting",
+              "headline": "${canonicalSlug}",
+              "datePublished": "2020-01-02T03:04:05+00:00",
+              "keywords": ["migration"]
+            }
+          </script>
+          ${extraHeadHtml}
+        </head>
+        <body>
+          <article>
+            <div class="min-w-0 min-h-0 max-w-prose">
+              ${bodyHtml}
+            </div>
+          </article>
+        </body>
+      </html>
+    `
+  );
+  return postSourceDir;
 }
 
 test("migrates canonical posts with frontmatter, markdown body, assets, and report", async () => {
@@ -130,4 +179,147 @@ test("ignores non-canonical post directories and reports expected count blocker"
   assert.deepEqual(report.posts, []);
   assert.deepEqual(persistedReport.posts, []);
   assert.deepEqual(report.blockers, ["Expected 1 canonical posts but discovered 0"]);
+});
+
+test("reports malformed index json and still writes migration report", async () => {
+  const root = await tempMigrationDir();
+  const sourceRoot = join(root, "source");
+  const outRoot = join(root, "out");
+  const reportPath = join(root, "report.json");
+
+  await mkdir(sourceRoot, { recursive: true });
+  await writeFile(join(sourceRoot, "index.json"), "{bad json");
+  await writeCanonicalPost({
+    sourceRoot,
+    sourceDirName: "202001-demo",
+    canonicalSlug: "demo",
+  });
+
+  const report = await runMigration({
+    sourceRoot,
+    outRoot,
+    reportPath,
+    expectedCount: 1,
+  });
+  const persistedReport = JSON.parse(await readFile(reportPath, "utf8"));
+
+  assert.equal(report.migratedCount, 1);
+  assert.match(report.blockers[0], /^Malformed index.json:/);
+  assert.match(persistedReport.blockers[0], /^Malformed index.json:/);
+  assert.equal(await pathExists(join(outRoot, "demo", "index.md")), true);
+});
+
+test("records per-post failures and continues migrating later posts", async () => {
+  const root = await tempMigrationDir();
+  const sourceRoot = join(root, "source");
+  const outRoot = join(root, "out");
+  const reportPath = join(root, "report.json");
+  const brokenSourceDir = await writeCanonicalPost({
+    sourceRoot,
+    sourceDirName: "202001-broken",
+    canonicalSlug: "broken",
+    extraHeadHtml: '<meta property="og:image" content="/posts/202001-broken/cover.png" />',
+  });
+  await mkdir(join(brokenSourceDir, "cover.png"), { recursive: true });
+  await writeCanonicalPost({
+    sourceRoot,
+    sourceDirName: "202002-ok",
+    canonicalSlug: "ok",
+  });
+
+  const report = await runMigration({
+    sourceRoot,
+    outRoot,
+    reportPath,
+    expectedCount: 2,
+  });
+  const brokenPost = report.posts.find(post => post.slug === "broken");
+  const okPost = report.posts.find(post => post.slug === "ok");
+
+  assert.equal(report.migratedCount, 1);
+  assert.ok(brokenPost);
+  assert.ok(okPost);
+  assert.match(brokenPost.blockers[0], /^Post migration failed:/);
+  assert.deepEqual(okPost.blockers, []);
+  assert.equal(await pathExists(join(outRoot, "ok", "index.md")), true);
+  assert.equal(await pathExists(reportPath), true);
+});
+
+test("reports invalid source root even when expected count is zero", async () => {
+  const root = await tempMigrationDir();
+  const sourceRoot = join(root, "missing-source");
+  const outRoot = join(root, "out");
+  const reportPath = join(root, "report.json");
+
+  const report = await runMigration({
+    sourceRoot,
+    outRoot,
+    reportPath,
+    expectedCount: 0,
+  });
+
+  assert.equal(report.migratedCount, 0);
+  assert.deepEqual(report.posts, []);
+  assert.ok(report.blockers.includes(`Missing source posts directory: ${join(sourceRoot, "posts")}`));
+});
+
+test("removes stale old-slug output directories without deleting current posts", async () => {
+  const root = await tempMigrationDir();
+  const sourceRoot = join(root, "source");
+  const outRoot = join(root, "out");
+  const reportPath = join(root, "report.json");
+  const staleOutputDir = join(outRoot, "202001-stale");
+  const currentOutputDir = join(outRoot, "current-sample");
+
+  await mkdir(staleOutputDir, { recursive: true });
+  await mkdir(currentOutputDir, { recursive: true });
+  await writeFile(join(staleOutputDir, "index.md"), "stale");
+  await writeFile(join(currentOutputDir, "index.md"), "current");
+  await writeCanonicalPost({
+    sourceRoot,
+    sourceDirName: "202001-demo",
+    canonicalSlug: "demo",
+  });
+
+  const report = await runMigration({
+    sourceRoot,
+    outRoot,
+    reportPath,
+    expectedCount: 1,
+  });
+
+  assert.equal(await pathExists(staleOutputDir), false);
+  assert.equal(await pathExists(join(currentOutputDir, "index.md")), true);
+  assert.deepEqual(report.cleanedOutputDirs, [staleOutputDir]);
+});
+
+test("does not treat html-looking text inside fenced code as residual html", async () => {
+  const root = await tempMigrationDir();
+  const sourceRoot = join(root, "source");
+  const outRoot = join(root, "out");
+  const reportPath = join(root, "report.json");
+
+  await writeCanonicalPost({
+    sourceRoot,
+    sourceDirName: "202001-code",
+    canonicalSlug: "code",
+    bodyHtml: `
+      <p>This body contains a code example with literal markup text.</p>
+      <pre><code class="language-html">&lt;span class="token"&gt;value&lt;/span&gt;</code></pre>
+    `,
+  });
+
+  const report = await runMigration({
+    sourceRoot,
+    outRoot,
+    reportPath,
+    expectedCount: 1,
+  });
+  const post = report.posts[0];
+
+  assert.equal(post.residualHtml, false);
+  assert.equal(
+    post.blockers.some(value => value === "Residual HTML remains in Markdown body"),
+    false
+  );
 });
