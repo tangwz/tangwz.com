@@ -4,7 +4,7 @@
 
 把旧仓库 `tangwz/tangwz.github.io` 中已经发布的老博文迁移到当前 Astro 站点，并产出可长期维护的 Markdown 源文。
 
-迁移重点是内容源文件质量，而不是像素级还原旧站页面。迁移后的文章应能被当前 `posts` content collection 正常加载、构建、搜索和归档。
+迁移重点是内容源文件质量，而不是像素级还原旧站页面。迁移后的文章应能被当前 `posts` content collection 正常加载、构建、搜索和归档。所有视觉呈现都以当前 Astro 博客样式为准，不参考旧博客样式。
 
 ## 背景与约束
 
@@ -15,6 +15,7 @@
 - 老站可识别出 25 篇文章页面，路径形如 `/posts/202009-basic-paxos/`。
 - 老站包含原始图片和 Hugo 生成的 resize 图片；迁移时只应保留原始图片。
 - 不创建新博客内容，不改写正文观点，不做主题或视觉改造。
+- 不参考旧博客样式；迁移结果完全使用当前博客的 Markdown 渲染、排版、代码高亮和图片样式。
 - 验证使用 `npm run build`，不运行 `npm run dev`。
 
 ## 推荐方案
@@ -38,6 +39,7 @@ src/content/posts/202009-basic-paxos/assets/Split-Votes.png
 ## 非目标
 
 - 不迁移旧站主题、布局、评论、点赞、分享按钮或页面脚本。
+- 不从旧站 HTML 保留与样式相关的 class、wrapper、inline style、srcset 或主题特定结构。
 - 不迁移 tags、categories、分页等生成页面。
 - 不复制 Hugo resize 派生图片，除非某张图片没有可用原始文件。
 - 不对正文做润色、翻译、结构重写或技术内容修订。
@@ -196,6 +198,7 @@ npm run build
 - 25 篇老文章以 Markdown 形式进入 `src/content/posts`。
 - 文章 frontmatter 符合当前 Astro schema。
 - 本地图片跟随文章目录管理，未批量引入 Hugo resize 派生图。
+- 文章渲染样式完全由当前博客控制，不携带旧博客主题样式残留。
 - `npm run build` 通过。
 - 迁移报告没有阻断级异常。
 - 抽查文章正文、图片、链接和代码块可读且可维护。
