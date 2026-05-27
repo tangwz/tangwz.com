@@ -141,6 +141,17 @@ function removeGeneratedNodes($) {
   });
 }
 
+function removeDanglingAnchorMarkers($) {
+  $("p, li").each((_, node) => {
+    const element = $(node);
+    if (element.children().length > 0) return;
+
+    const text = element.text();
+    const cleaned = text.replace(/([^A-Za-z0-9_])#\s*$/u, "$1").trimEnd();
+    if (cleaned !== text) element.text(cleaned);
+  });
+}
+
 function unwrapThemeFigures($) {
   $("figure").each((_, figure) => {
     const node = $(figure);
@@ -197,6 +208,7 @@ function cleanFragment(html) {
 
   cleanCodeBlocks($);
   removeGeneratedNodes($);
+  removeDanglingAnchorMarkers($);
   unwrapThemeFigures($);
   removeStyleArtifacts($);
   unwrapThemeContainers($);
