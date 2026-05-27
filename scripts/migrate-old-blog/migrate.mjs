@@ -77,10 +77,19 @@ async function exists(path) {
 
 async function readIndexRecords(sourceRoot) {
   const indexPath = join(sourceRoot, "index.json");
-  if (!(await exists(indexPath))) return new Map();
+  if (!(await exists(indexPath))) return { records: new Map(), blockers: [] };
 
-  const raw = await readFile(indexPath, "utf8");
-  const parsed = JSON.parse(raw);
+  let parsed;
+  try {
+    const raw = await readFile(indexPath, "utf8");
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    return {
+      records: new Map(),
+      blockers: [blocker(`Malformed index.json: ${errorMessage(error)}`)],
+    };
+  }
+
   const records = Array.isArray(parsed) ? parsed : Object.values(parsed ?? {});
   const byPermalink = new Map();
 
@@ -89,7 +98,7 @@ async function readIndexRecords(sourceRoot) {
     if (permalink) byPermalink.set(permalink, record);
   }
 
-  return byPermalink;
+  return { records: byPermalink, blockers: [] };
 }
 
 async function discoverPostDirs(sourceRoot) {
@@ -137,7 +146,8 @@ function markdownTextLength(markdown) {
 }
 
 function residualHtml(markdown) {
-  return /<\/?[a-z][\w:-]*(?:\s[^>]*)?>/i.test(markdown);
+  const withoutFencedCode = String(markdown ?? "").replace(/```[\s\S]*?```/g, " ");
+  return /<\/?[a-z][\w:-]*(?:\s[^>]*)?>/i.test(withoutFencedCode);
 }
 
 function unmigratedLocalImageUrls(markdown) {
@@ -170,6 +180,7 @@ function postReportBase({ sourceDirName, slug, permalink }) {
     sourceDirName,
     slug,
     permalink,
+    generated: false,
     copiedAssets: [],
     missingAssets: [],
     fallbacks: [],
@@ -179,6 +190,37 @@ function postReportBase({ sourceDirName, slug, permalink }) {
     codeBlockCount: 0,
     blockers: [],
   };
+}
+
+function errorMessage(error) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function fallbackPostReport(postDir, error) {
+  const slug = postDir.name.replace(/^20\d{4}-/, "");
+  return {
+    ...postReportBase({
+      sourceDirName: postDir.name,
+      slug,
+      permalink: `/posts/${slug}/`,
+    }),
+    blockers: [blocker(`Post migration failed: ${errorMessage(error)}`)],
+  };
+}
+
+async function failedPostReport({ postDir, error }) {
+  try {
+    const html = await readFile(postDir.htmlPath, "utf8");
+    const $ = load(html);
+    const permalink = permalinkFromCanonical($, postDir.name);
+    const slug = slugFromPermalink(permalink, postDir.name);
+    return {
+      ...postReportBase({ sourceDirName: postDir.name, slug, permalink }),
+      blockers: [blocker(`Post migration failed: ${errorMessage(error)}`)],
+    };
+  } catch {
+    return fallbackPostReport(postDir, error);
+  }
 }
 
 async function copyAssetForPost({
@@ -298,8 +340,27 @@ async function migratePost({ sourceRoot, outRoot, indexRecords, postDir }) {
     requiredMissing.length > 0 ? fillMissingRequiredMetadata(metadata) : metadata;
   const content = `${toFrontmatter(frontmatterMetadata)}${markdown}\n`;
   await writeFile(join(outputPostDir, "index.md"), content);
+  postReport.generated = true;
 
   return postReport;
+}
+
+async function cleanStaleOldOutputDirs(outRoot) {
+  if (!(await exists(outRoot))) return [];
+
+  const entries = await readdir(outRoot, { withFileTypes: true });
+  const cleanedOutputDirs = [];
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    if (!CANONICAL_POST_DIR_PATTERN.test(entry.name)) continue;
+
+    const outputDir = join(outRoot, entry.name);
+    await rm(outputDir, { recursive: true, force: true });
+    cleanedOutputDirs.push(outputDir);
+  }
+
+  return cleanedOutputDirs.sort();
 }
 
 export async function runMigration({ sourceRoot, outRoot, reportPath, expectedCount = 25 }) {
@@ -307,17 +368,25 @@ export async function runMigration({ sourceRoot, outRoot, reportPath, expectedCo
   if (!outRoot) throw new Error("outRoot is required");
   if (!reportPath) throw new Error("reportPath is required");
 
-  const indexRecords = await readIndexRecords(sourceRoot);
-  const postDirs = await discoverPostDirs(sourceRoot);
   const report = {
     generatedAt: new Date().toISOString(),
     sourceRoot,
     outRoot,
     expectedCount,
     migratedCount: 0,
+    cleanedOutputDirs: [],
     blockers: [],
     posts: [],
   };
+
+  const postsRoot = join(sourceRoot, "posts");
+  if (!(await exists(postsRoot))) {
+    report.blockers.push(blocker(`Missing source posts directory: ${postsRoot}`));
+  }
+
+  const indexResult = await readIndexRecords(sourceRoot);
+  report.blockers.push(...indexResult.blockers);
+  const postDirs = await discoverPostDirs(sourceRoot);
 
   if (postDirs.length !== expectedCount) {
     report.blockers.push(
@@ -325,14 +394,24 @@ export async function runMigration({ sourceRoot, outRoot, reportPath, expectedCo
     );
   }
 
+  report.cleanedOutputDirs = await cleanStaleOldOutputDirs(outRoot);
   await mkdir(outRoot, { recursive: true });
 
   for (const postDir of postDirs) {
-    const postReport = await migratePost({ sourceRoot, outRoot, indexRecords, postDir });
-    report.posts.push(postReport);
+    try {
+      const postReport = await migratePost({
+        sourceRoot,
+        outRoot,
+        indexRecords: indexResult.records,
+        postDir,
+      });
+      report.posts.push(postReport);
+    } catch (error) {
+      report.posts.push(await failedPostReport({ postDir, error }));
+    }
   }
 
-  report.migratedCount = report.posts.length;
+  report.migratedCount = report.posts.filter(post => post.generated).length;
   for (const post of report.posts) {
     for (const postBlocker of post.blockers) {
       report.blockers.push(`${post.slug}: ${postBlocker}`);
