@@ -4,6 +4,10 @@ function cleanText(value) {
     .trim();
 }
 
+function cleanSummary(value) {
+  return cleanText(cleanText(value).replace(/\s+#\s+/g, " "));
+}
+
 function metaContent($, selector) {
   return cleanText($(selector).first().attr("content"));
 }
@@ -115,6 +119,7 @@ export function extractMetadata($, indexRecords, permalink) {
     description = cleanText(fallback.summary);
     fallbacks.push("description");
   }
+  description = cleanSummary(description);
 
   let tags = normalizeTags(article.keywords);
   if (tags.length === 0) {
