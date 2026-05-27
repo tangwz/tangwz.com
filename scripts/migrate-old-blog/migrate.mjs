@@ -98,24 +98,18 @@ async function discoverPostDirs(sourceRoot) {
 
   const entries = await readdir(postsRoot, { withFileTypes: true });
   const postDirs = [];
-  const fallbackPostDirs = [];
 
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
+    if (!CANONICAL_POST_DIR_PATTERN.test(entry.name)) continue;
 
     const htmlPath = join(postsRoot, entry.name, "index.html");
     if (!(await exists(htmlPath))) continue;
 
-    const postDir = { name: entry.name, path: join(postsRoot, entry.name), htmlPath };
-    if (CANONICAL_POST_DIR_PATTERN.test(entry.name)) {
-      postDirs.push(postDir);
-    } else {
-      fallbackPostDirs.push(postDir);
-    }
+    postDirs.push({ name: entry.name, path: join(postsRoot, entry.name), htmlPath });
   }
 
-  const discovered = postDirs.length > 0 ? postDirs : fallbackPostDirs;
-  return discovered.sort((a, b) => a.name.localeCompare(b.name));
+  return postDirs.sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function collectImageSources($) {
