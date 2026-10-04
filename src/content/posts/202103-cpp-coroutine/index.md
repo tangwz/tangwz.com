@@ -9,6 +9,7 @@ canonicalURL: "https://tangwz.com/posts/202103-cpp-coroutine/"
 ogImage: "./assets/featured.png"
 draft: false
 ---
+
 <!-- migrated-from: https://tangwz.com/posts/202103-cpp-coroutine/ -->
 
 C++20 带着 Coroutines 来了！
@@ -81,23 +82,23 @@ ReturnObject counter(std::coroutine_handle<> *continuation_out) {
 
 这奇怪的协程代码涉及了 C++ 协程很重要的三个概念：
 
-*   `promise_type`
-*   `Awaitable`
-*   `std::coroutine_handle<>`
+- `promise_type`
+- `Awaitable`
+- `std::coroutine_handle<>`
 
 在写 C++20 的协程之前，我们必须需要先了解三个概念，可以用这三张图来形容这三个概念：
 
 ![](https://i.loli.net/2021/03/06/9om1brcaIDQl374.jpg)
 
-_图来源: [https://www.youtube.com/watch?v=vzC2iRfO\_H8](https://www.youtube.com/watch?v=vzC2iRfO_H8)_
+_图来源: [https://www.youtube.com/watch?v=vzC2iRfO_H8](https://www.youtube.com/watch?v=vzC2iRfO_H8)_
 
 ## Promise
 
 C++ 协程的**返回类型**必须是 `promise_type`，`promise_type` 是一个 interface，你可以用它来控制协程，在协程的生命周期中注入自定义行为：
 
-*   `get_return_object`： 控制协程的返回对象
-*   `initial_suspend`：在协程开始的时候挂起
-*   `final_suspend`：在协程结束的时候挂起
+- `get_return_object`： 控制协程的返回对象
+- `initial_suspend`：在协程开始的时候挂起
+- `final_suspend`：在协程结束的时候挂起
 
 协程的生命周期如下，用户自定义的函数 `<function-body>` 被包裹在下面的伪代码中(来源：http://eel.is/c++draft/dcl.fct.def.coroutine#5)：
 
@@ -125,17 +126,17 @@ final-suspend :
 
 除此之外，Promise 还有一些其它责任：
 
-*   `return_void()`/`return_value()`/`yield_value()` 方法: 用来控制 `co_return` 和 `co_yield` 的行为；
-*   `unhandled_exception()` 处理异常
-*   创建和销毁协程的 `stackframe`
-*   处理 `stackframe` 创建可能发生的异常
+- `return_void()`/`return_value()`/`yield_value()` 方法: 用来控制 `co_return` 和 `co_yield` 的行为；
+- `unhandled_exception()` 处理异常
+- 创建和销毁协程的 `stackframe`
+- 处理 `stackframe` 创建可能发生的异常
 
 > stackframe ：函数运行时占用的内存空间，是栈上的数据集合，它包括：
 
-*   Local variables
-*   Saved copies of registers modified by subprograms that could need restoration
-*   Argument parameters
-*   Return address
+- Local variables
+- Saved copies of registers modified by subprograms that could need restoration
+- Argument parameters
+- Return address
 
 ## Awaitable
 
@@ -143,9 +144,9 @@ final-suspend :
 
 一个 Awaitable 对象可以成为 `co_await` 调用的对象。Awaitable 拥有以下方法：
 
-*   `await_ready()`：是否要挂起，如果返回 true，那么 `co_await` 就不会挂起函数；
-*   `await_resume()`：`co_await` 的返回值，通常返回空；
-*   `await_suspend()`：协程挂起时的行为；
+- `await_ready()`：是否要挂起，如果返回 true，那么 `co_await` 就不会挂起函数；
+- `await_resume()`：`co_await` 的返回值，通常返回空；
+- `await_suspend()`：协程挂起时的行为；
 
 > 可以在 `await_suspend` 中实现 `await_ready` 的效果，例如直接不挂起当前的协程，但在调用 `await_suspend` 之前，编译器必须将所有状态捆绑到协程的 `stackframe` 中，这会更耗时。
 
@@ -175,8 +176,8 @@ namespace std {
 
 `co_await` 挂起函数，并创建了一个可调用对象，这个对象可以用来恢复Hanns乎的执行。这个可调用对象的类型就是 `std::coroutine_handle<>`，最常用的两个方法是：
 
-*   `handle.resume()`：恢复协程的执行；
-*   `handle.destroy()`：销毁协程；
+- `handle.resume()`：恢复协程的执行；
+- `handle.destroy()`：销毁协程；
 
 `Coroutine Handle` 很像指针，我们可以复制它，但析构函数不会释放相关状态的内存。为了避免内存泄漏，一般要调用 `handle.destroy()` 来释放（尽管在某些情况下，协程会在完成后自行销毁——前文有提到）。同样像指针一样，一旦销毁了一个 `Coroutine Handle` ，指向同一个协程的另一个 `Coroutine Handle` 将指向垃圾，并在调用时表现出未定义行为。
 
@@ -244,7 +245,7 @@ co_yield <expression>;
 co_await promise.yield_value(<expression>);
 ```
 
-所以，需要在 promise\_type 中添加一个 `yield_value` 方法。上面的例子可以改为：
+所以，需要在 promise_type 中添加一个 `yield_value` 方法。上面的例子可以改为：
 
 ```c++
 #include <coroutine>
@@ -425,8 +426,8 @@ int main() {
 
 ## Reference
 
-*   C++ Coroutine definitions: [http://eel.is/c++draft/dcl.fct.def.coroutine#5](http://eel.is/c++draft/dcl.fct.def.coroutine#5)
-*   C++ draft expr.await: [http://eel.is/c++draft/expr.await](http://eel.is/c++draft/expr.await)
-*   C++ Coroutines: Understanding the promise type: [https://lewissbaker.github.io/2018/09/05/understanding-the-promise-type](https://lewissbaker.github.io/2018/09/05/understanding-the-promise-type)
-*   官网的例子：https://en.cppreference.com/w/cpp/language/coroutines
-*   My tutorial and take on C++20 coroutines：https://www.scs.stanford.edu/~dm/blog/c++-coroutines.html#coroutine-handles
+- C++ Coroutine definitions: [http://eel.is/c++draft/dcl.fct.def.coroutine#5](http://eel.is/c++draft/dcl.fct.def.coroutine#5)
+- C++ draft expr.await: [http://eel.is/c++draft/expr.await](http://eel.is/c++draft/expr.await)
+- C++ Coroutines: Understanding the promise type: [https://lewissbaker.github.io/2018/09/05/understanding-the-promise-type](https://lewissbaker.github.io/2018/09/05/understanding-the-promise-type)
+- 官网的例子：https://en.cppreference.com/w/cpp/language/coroutines
+- My tutorial and take on C++20 coroutines：https://www.scs.stanford.edu/~dm/blog/c++-coroutines.html#coroutine-handles

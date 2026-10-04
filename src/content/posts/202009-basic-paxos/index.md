@@ -9,6 +9,7 @@ canonicalURL: "https://tangwz.com/posts/202009-basic-paxos/"
 ogImage: "./assets/cover.png"
 draft: false
 ---
+
 <!-- migrated-from: https://tangwz.com/posts/202009-basic-paxos/ -->
 
 > Google Chubby 的作者 Mike Burrows 说过：There is only one consensus protocol, and that’s Paxos.
@@ -35,18 +36,18 @@ draft: false
 
 ## 基本概念
 
-*   Proposal Value：提案的值；
-*   Proposal Number：提案编号；
-*   Proposal：提案 = 提案编号 + 提案的值；
-*   Chosen：批准，也叫选定。一旦某个值被 Chosen，后续 Paxos 都必须用该值进行交互。
+- Proposal Value：提案的值；
+- Proposal Number：提案编号；
+- Proposal：提案 = 提案编号 + 提案的值；
+- Chosen：批准，也叫选定。一旦某个值被 Chosen，后续 Paxos 都必须用该值进行交互。
 
 > 注：Proposal 有人叫“提议”有人叫“提案”，此处和维基百科里的翻译保持一致，叫“提案”。
 
 ## 角色
 
-*   Proposer：提案发起者；
-*   Acceptor：提案接收者；
-*   Learner：提案学习者；
+- Proposer：提案发起者；
+- Acceptor：提案接收者；
+- Learner：提案学习者；
 
 # 问题描述
 
@@ -106,10 +107,10 @@ send PREPARE(++n)
 
 Acceptor 接收到 `Prepare（n)` 请求，此时有两种情况：
 
-*   如果 n 大于之前接受到的所有 Prepare 请求的编号，则返回 `Promise()` 响应，并承诺将不会接收编号小于 n 的提案。如果有提案被 Chosen 的话，`Promise()` 响应还应包含前一次提案编号和对应的值。
-*   否则（即 n 小于等于 Acceptor 之前收到的最大编号）忽略，但常常会回复一个拒绝响应。
+- 如果 n 大于之前接受到的所有 Prepare 请求的编号，则返回 `Promise()` 响应，并承诺将不会接收编号小于 n 的提案。如果有提案被 Chosen 的话，`Promise()` 响应还应包含前一次提案编号和对应的值。
+- 否则（即 n 小于等于 Acceptor 之前收到的最大编号）忽略，但常常会回复一个拒绝响应。
 
-**所以，Acceptor 需要持久化存储 max\_n、accepted\_N 和 accepted\_VALUE。**
+**所以，Acceptor 需要持久化存储 max_n、accepted_N 和 accepted_VALUE。**
 
 伪代码：
 

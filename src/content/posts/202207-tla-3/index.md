@@ -9,6 +9,7 @@ canonicalURL: "https://tangwz.com/posts/202207-tla-3/"
 ogImage: "./assets/cover.png"
 draft: false
 ---
+
 <!-- migrated-from: https://tangwz.com/posts/202207-tla-3/ -->
 
 ![](./assets/mindnote.png)

@@ -8,6 +8,7 @@ tags:
 canonicalURL: "https://tangwz.com/posts/202102-raft/"
 draft: false
 ---
+
 <!-- migrated-from: https://tangwz.com/posts/202102-raft/ -->
 
 _本文整理自 Ongaro 在 Youtube 上的视频。_
@@ -16,7 +17,7 @@ _本文整理自 Ongaro 在 Youtube 上的视频。_
 
 Raft 的目标（或者说是分布式共识算法的目标）是：**保证 log 完全相同地复制到多台服务器上**。
 
-![\-w1001](https://i.loli.net/2021/02/03/LsBmFw8ZUIJuNXP.jpg)
+![-w1001](https://i.loli.net/2021/02/03/LsBmFw8ZUIJuNXP.jpg)
 
 只要每台服务器的日志相同，那么，在不同服务器上的状态机以相同顺序从日志中执行相同的命令，将会产生相同的结果。
 
@@ -26,13 +27,13 @@ Raft 的目标（或者说是分布式共识算法的目标）是：**保证 log
 
 我们假设：
 
-*   服务器可能会宕机、会停止运行过段时间再恢复，但是**非拜占庭的**（即它的行为是非恶意的，不会篡改数据等）；
-*   网络通信会中断，消息可能会丢失、延迟或乱序；可能会网络分区；
+- 服务器可能会宕机、会停止运行过段时间再恢复，但是**非拜占庭的**（即它的行为是非恶意的，不会篡改数据等）；
+- 网络通信会中断，消息可能会丢失、延迟或乱序；可能会网络分区；
 
 Raft 是基于 Leader 的共识算法，故主要考虑：
 
-*   Leader 正常运行
-*   Leader 故障，必须选出新的 Leader
+- Leader 正常运行
+- Leader 故障，必须选出新的 Leader
 
 优点：只有一个 Leader，简单。
 
@@ -55,26 +56,26 @@ Raft 是基于 Leader 的共识算法，故主要考虑：
 
 服务器在任意时间只能处于以下三种状态之一：
 
-*   Leader：处理所有客户端请求、日志复制。同一时刻最多只能有一个可行的 Leader；
-*   Follower：完全被动的（不发送 RPC，只响应收到的 RPC）——大多数服务器在大多数情况下处于此状态；
-*   Candidate：用来选举新的 Leader，处于 Leader 和 Follower 之间的暂时状态；
+- Leader：处理所有客户端请求、日志复制。同一时刻最多只能有一个可行的 Leader；
+- Follower：完全被动的（不发送 RPC，只响应收到的 RPC）——大多数服务器在大多数情况下处于此状态；
+- Candidate：用来选举新的 Leader，处于 Leader 和 Follower 之间的暂时状态；
 
 **系统正常运行时，只有一个 Leader，其余都是 Followers.**
 
 状态转换图：
 
-![\-w935](https://i.loli.net/2021/02/03/JRt5QCUgKOHfj1A.jpg)
+![-w935](https://i.loli.net/2021/02/03/JRt5QCUgKOHfj1A.jpg)
 
 ## 任期
 
 时间被划分成一个个的**任期(Term)**，每个任期都由一个数字来表示任期号，任期号单调递增并且永远不会重复。
 
-![\-w735](https://i.loli.net/2021/02/03/8qQX6wrioezWEav.jpg)
+![-w735](https://i.loli.net/2021/02/03/8qQX6wrioezWEav.jpg)
 
 一个正常的任期至少有一个 Leader，通常分为两部分：
 
-*   任期开始时的选举过程；
-*   正常运行的部分；
+- 任期开始时的选举过程；
+- 正常运行的部分；
 
 有些任期可能没有选出 Leader（如图 Term 3），这时候会立即进入下一个任期，再次尝试选出一个 Leader。
 
@@ -88,30 +89,30 @@ Raft 是基于 Leader 的共识算法，故主要考虑：
 
 Raft 中服务器之间所有类型的通信通过两个 RPC 调用：
 
-*   `RequestVote`：用于选举；
-*   `AppendEntries`：用于复制 log 和发送心跳；
+- `RequestVote`：用于选举；
+- `AppendEntries`：用于复制 log 和发送心跳；
 
 # 1\. Leader 选举
 
 ## 启动
 
-![\-w870](https://i.loli.net/2021/02/03/J4FBX29fgucDV7l.jpg)
+![-w870](https://i.loli.net/2021/02/03/J4FBX29fgucDV7l.jpg)
 
-*   节点启动时，都是 Follower 状态；
-*   Follower 被动地接受 Leader 或 Candidate 的 RPC；
-*   所以，如果 Leader 想要保持权威，必须向集群中的其它节点发送心跳包（空的 `AppendEntries RPC`）；
-*   等待选举超时(`electionTimeout`，一般在 100~500ms)后，Follower 没有收到任何 RPC：
-    *   Follower 认为集群中没有 Leader
-    *   开始新的一轮选举
+- 节点启动时，都是 Follower 状态；
+- Follower 被动地接受 Leader 或 Candidate 的 RPC；
+- 所以，如果 Leader 想要保持权威，必须向集群中的其它节点发送心跳包（空的 `AppendEntries RPC`）；
+- 等待选举超时(`electionTimeout`，一般在 100~500ms)后，Follower 没有收到任何 RPC：
+  - Follower 认为集群中没有 Leader
+  - 开始新的一轮选举
 
 ## 选举
 
 当一个节点开始竞选：
 
-*   增加自己的 `currentTerm`
-*   转为 Candidate 状态，**其目标是获取超过半数节点的选票，让自己成为 Leader**
-*   **先给自己投一票**
-*   并行地向集群中其它节点发送 `RequestVote RPC` 索要选票，如果没有收到指定节点的响应，它会反复尝试，直到发生以下三种情况之一：
+- 增加自己的 `currentTerm`
+- 转为 Candidate 状态，**其目标是获取超过半数节点的选票，让自己成为 Leader**
+- **先给自己投一票**
+- 并行地向集群中其它节点发送 `RequestVote RPC` 索要选票，如果没有收到指定节点的响应，它会反复尝试，直到发生以下三种情况之一：
 
 1.  获得超过半数的选票：成为 Leader，并向其它节点发送 `AppendEntries` 心跳；
 2.  收到来自 Leader 的 RPC：转为 Follower；
@@ -119,7 +120,7 @@ Raft 中服务器之间所有类型的通信通过两个 RPC 调用：
 
 流程图如下：
 
-![\-w542](https://i.loli.net/2021/02/03/4WmUxfkB56CRAp3.jpg)
+![-w542](https://i.loli.net/2021/02/03/4WmUxfkB56CRAp3.jpg)
 
 ## 选举安全性
 
@@ -127,10 +128,10 @@ Raft 中服务器之间所有类型的通信通过两个 RPC 调用：
 
 安全性(safety)：一个任期内只会有一个 Leader 被选举出来。需要保证：
 
-*   每个节点在同一任期内只能投一次票，它将投给第一个满足条件的投票请求，然后拒绝其它 Candidate 的请求。这需要持久化存储投票信息 `votedFor`，以便宕机重启后恢复，否则重启后 `votedFor` 丢失会导致投给别的节点；
-*   只有获得超过半数节点的选票才能成为 Leader，也就是说，两个不同的 Candidate 无法在同一任期内都获得超过半数的票；
+- 每个节点在同一任期内只能投一次票，它将投给第一个满足条件的投票请求，然后拒绝其它 Candidate 的请求。这需要持久化存储投票信息 `votedFor`，以便宕机重启后恢复，否则重启后 `votedFor` 丢失会导致投给别的节点；
+- 只有获得超过半数节点的选票才能成为 Leader，也就是说，两个不同的 Candidate 无法在同一任期内都获得超过半数的票；
 
-![\-w794](https://i.loli.net/2021/02/03/CmEIAMG1HV4XiLB.jpg)
+![-w794](https://i.loli.net/2021/02/03/CmEIAMG1HV4XiLB.jpg)
 
 活性(liveness)：确保最终能选出一个 Leader。
 
@@ -138,21 +139,21 @@ Raft 中服务器之间所有类型的通信通过两个 RPC 调用：
 
 解决办法很简单：
 
-*   节点随机选择超时时间，通常在 \[T, 2T\] 之间（T = `electionTimeout`）
-*   这样，节点不太可能再同时开始竞选，先竞选的节点有足够的时间来索要其他节点的选票
-*   T » broadcast time(T 远大于广播时间)时效果更佳
+- 节点随机选择超时时间，通常在 \[T, 2T\] 之间（T = `electionTimeout`）
+- 这样，节点不太可能再同时开始竞选，先竞选的节点有足够的时间来索要其他节点的选票
+- T » broadcast time(T 远大于广播时间)时效果更佳
 
 # 2\. 日志复制
 
 ## 日志结构
 
-![\-w1019](https://i.loli.net/2021/02/03/1CcUMnIhJeBkbYj.jpg)
+![-w1019](https://i.loli.net/2021/02/03/1CcUMnIhJeBkbYj.jpg)
 
 每个节点存储自己的日志副本(`log[]`)，每条日志记录包含：
 
-*   索引：该记录在日志中的位置
-*   任期号：该记录首次被创建时的任期号
-*   命令
+- 索引：该记录在日志中的位置
+- 任期号：该记录首次被创建时的任期号
+- 命令
 
 \*\*日志必须持久化存储。\*\*一个节点必须先将记录安全写到磁盘，才能向系统中其他节点返回响应。
 
@@ -164,15 +165,15 @@ Raft 中服务器之间所有类型的通信通过两个 RPC 调用：
 
 ## 正常运行
 
-*   客户端向 Leader 发送命令，希望该命令被所有状态机执行；
-*   Leader 先将该命令追加到自己的日志中；
-*   Leader 并行地向其它节点发送 `AppendEntries RPC`，等待响应；
-*   收到超过半数节点的响应，则认为新的日志记录是被提交的：
-    *   Leader 将命令传给自己的状态机，然后向客户端返回响应
-    *   此外，一旦 Leader 知道一条记录被提交了，将在后续的 `AppendEntries RPC` 中通知已经提交记录的 Followers
-    *   Follower 将已提交的命令传给自己的状态机
-*   如果 Follower 宕机/超时：Leader 将反复尝试发送 RPC；
-*   性能优化：Leader 不必等待每个 Follower 做出响应，只需要超过半数的成功响应（确保日志记录已经存储在超过半数的节点上）——一个很慢的节点不会使系统变慢，因为 Leader 不必等他；
+- 客户端向 Leader 发送命令，希望该命令被所有状态机执行；
+- Leader 先将该命令追加到自己的日志中；
+- Leader 并行地向其它节点发送 `AppendEntries RPC`，等待响应；
+- 收到超过半数节点的响应，则认为新的日志记录是被提交的：
+  - Leader 将命令传给自己的状态机，然后向客户端返回响应
+  - 此外，一旦 Leader 知道一条记录被提交了，将在后续的 `AppendEntries RPC` 中通知已经提交记录的 Followers
+  - Follower 将已提交的命令传给自己的状态机
+- 如果 Follower 宕机/超时：Leader 将反复尝试发送 RPC；
+- 性能优化：Leader 不必等待每个 Follower 做出响应，只需要超过半数的成功响应（确保日志记录已经存储在超过半数的节点上）——一个很慢的节点不会使系统变慢，因为 Leader 不必等他；
 
 ## 日志一致性
 
@@ -187,10 +188,10 @@ Raft 尝试在集群中保持日志较高的一致性。
 
 Raft 通过 `AppendEntries RPC` 来检测这两个属性。
 
-*   对于每个 `AppendEntries RPC` 包含新日志记录**之前那条记录的**索引(`prevLogIndex`)和任期(`prevLogTerm`)；
-*   Follower 检查自己的 index 和 term 是否与 `prevLogIndex` 和 `prevLogTerm` 匹配，匹配则接收该记录；否则拒绝；
+- 对于每个 `AppendEntries RPC` 包含新日志记录**之前那条记录的**索引(`prevLogIndex`)和任期(`prevLogTerm`)；
+- Follower 检查自己的 index 和 term 是否与 `prevLogIndex` 和 `prevLogTerm` 匹配，匹配则接收该记录；否则拒绝；
 
-![\-w1018](https://i.loli.net/2021/02/03/BkCdlbF34aQJhz9.jpg)
+![-w1018](https://i.loli.net/2021/02/03/BkCdlbF34aQJhz9.jpg)
 
 # 3\. Leader 更替
 
@@ -204,7 +205,7 @@ Raft 通过 `AppendEntries RPC` 来检测这两个属性。
 
 但与此同时，Leader 也可能在完成这项工作之前故障，日志会在一段时间内堆积起来，从而造成看起来相当混乱的情况，如下所示：
 
-![\-w534](https://i.loli.net/2021/02/03/6LSfxX48Pzs92Yq.jpg)
+![-w534](https://i.loli.net/2021/02/03/6LSfxX48Pzs92Yq.jpg)
 
 因为我们已经知道 index 和 term 是日志记录的唯一标识符，这里不再显示日志包含的命令，下同。
 
@@ -220,18 +221,18 @@ Raft 通过 `AppendEntries RPC` 来检测这两个属性。
 
 Raft 安全性(Safety)：如果某条日志记录在某个任期号已提交，那么这条记录必然出现在更大任期号的未来 Leader 的日志中。
 
-![\-w837](https://i.loli.net/2021/02/03/7RGYXVTCreaIt5U.jpg)
+![-w837](https://i.loli.net/2021/02/03/7RGYXVTCreaIt5U.jpg)
 
 这保证了安全性要求：
 
-*   Leader 不会覆盖日志中的记录；
-*   只有 Leader 的日志中的记录才能被提交；
-*   在应用到状态机之前，日志必须先被提交；
+- Leader 不会覆盖日志中的记录；
+- 只有 Leader 的日志中的记录才能被提交；
+- 在应用到状态机之前，日志必须先被提交；
 
 这决定我们要修改选举程序：
 
-*   如果节点的日志中没有正确的内容，需要避免其成为 Leader；
-*   稍微修改 committed 的定义（_即前面提到的要稍作修改_）：前面说多数派存储即是已提交的，但在某些时候，我们必须延迟提交日志记录，直到我们知道这条记录是安全的，**所谓安全的，就是我们认为后续 Leader 也会有这条日志**。
+- 如果节点的日志中没有正确的内容，需要避免其成为 Leader；
+- 稍微修改 committed 的定义（_即前面提到的要稍作修改_）：前面说多数派存储即是已提交的，但在某些时候，我们必须延迟提交日志记录，直到我们知道这条记录是安全的，**所谓安全的，就是我们认为后续 Leader 也会有这条日志**。
 
 ## 延迟提交，选出最佳 Leader
 
@@ -239,7 +240,7 @@ Raft 安全性(Safety)：如果某条日志记录在某个任期号已提交，�
 
 这有点棘手，举个例子：假设我们要在下面的集群中选出一个新 Leader，但此时第三台服务器不可用。
 
-![\-w601](https://i.loli.net/2021/02/03/FEtKwMzfrZXUOdv.jpg)
+![-w601](https://i.loli.net/2021/02/03/FEtKwMzfrZXUOdv.jpg)
 
 这种情况下，仅看前两个节点的日志我们无法确认是否达成多数派，故无法确认第五条日志是否已提交。
 
@@ -247,15 +248,15 @@ Raft 安全性(Safety)：如果某条日志记录在某个任期号已提交，�
 
 通过比较日志，在选举期间，选择最有可能包含所有已提交的日志：
 
-*   Candidate 在 `RequestVote RPCs` 中包含日志信息（最后一条记录的 index 和 term，记为 `lastIndex` 和 `lastTerm`）；
-*   收到此投票请求的服务器 V 将比较谁的日志更完整：`(lastTermV > lastTermC) || (lastTermV == lastTermC) && (lastIndexV > lastIndexC)` 将拒绝投票；（即：V 的任期比 C 的任期新，或任期相同但 V 的日志比 C 的日志更完整）；
-*   无论谁赢得选举，可以确保 Leader 和超过半数投票给它的节点中拥有最完整的日志——**最完整的意思就是 index 和 term 这对唯一标识是最大的**。
+- Candidate 在 `RequestVote RPCs` 中包含日志信息（最后一条记录的 index 和 term，记为 `lastIndex` 和 `lastTerm`）；
+- 收到此投票请求的服务器 V 将比较谁的日志更完整：`(lastTermV > lastTermC) || (lastTermV == lastTermC) && (lastIndexV > lastIndexC)` 将拒绝投票；（即：V 的任期比 C 的任期新，或任期相同但 V 的日志比 C 的日志更完整）；
+- 无论谁赢得选举，可以确保 Leader 和超过半数投票给它的节点中拥有最完整的日志——**最完整的意思就是 index 和 term 这对唯一标识是最大的**。
 
 ## 举个例子
 
 ### Case 1: Leader 决定提交日志
 
-![\-w589](https://i.loli.net/2021/02/03/EFgfXRzo3NbLHB6.jpg)
+![-w589](https://i.loli.net/2021/02/03/EFgfXRzo3NbLHB6.jpg)
 
 任期 2 的 Leader S1 的 index = 4 日志刚刚被复制到 S3，并且 Leader 可以看到 index = 4 已复制到超过半数的服务器，那么该日志可以提交，并且安全地应用到状态机。
 
@@ -265,7 +266,7 @@ Raft 安全性(Safety)：如果某条日志记录在某个任期号已提交，�
 
 ### Case 2: Leader 试图提交之前任期的日志
 
-![\-w588](https://i.loli.net/2021/02/03/WfnMTVqRNwH4g3A.jpg)
+![-w588](https://i.loli.net/2021/02/03/WfnMTVqRNwH4g3A.jpg)
 
 如图所示的情况，在任期 2 时记录仅写在 S1 和 S2 两个节点上，由于某种原因，任期 3 的 Leader S5 并不知道这些记录，S5 创建了自己的三条记录然后宕机了，然后任期 4 的 Leader S1 被选出，S1 试图与其它服务器的日志进行匹配。因此它复制了任期 2 的日志到 S3。
 
@@ -281,10 +282,10 @@ Raft 安全性(Safety)：如果某条日志记录在某个任期号已提交，�
 
 Leader 要提交一条日志：
 
-*   日志必须存储在超过半数的节点上；
-*   **Leader 必须看到：超过半数的节点上还必须存储着至少一条自己任期内的日志**；
+- 日志必须存储在超过半数的节点上；
+- **Leader 必须看到：超过半数的节点上还必须存储着至少一条自己任期内的日志**；
 
-![\-w483](https://i.loli.net/2021/02/03/fBWkG9E2YLQp5FN.jpg)
+![-w483](https://i.loli.net/2021/02/03/fBWkG9E2YLQp5FN.jpg)
 
 如图，回到上面的 Case 2: 当 index = 3 & term = 2 被复制到 S3 时，它还不能提交该记录，必须等到 term = 4 的记录存储在超过半数的节点上，此时 index = 3 和 index = 4 可以认为是已提交。
 
@@ -294,14 +295,14 @@ Leader 要提交一条日志：
 
 ## 日志不一致
 
-![\-w1024](https://i.loli.net/2021/02/03/g6HrkQfEzC7eNqd.jpg)
+![-w1024](https://i.loli.net/2021/02/03/g6HrkQfEzC7eNqd.jpg)
 
 Leader 变更可能导致日志的不一致，这里展示一种可能的情况。
 
 可以从图中看出，Raft 集群中通常有两种不一致的日志：
 
-*   缺失的记录(Missing Entries)；
-*   多出来的记录(Extraneous Entries)；
+- 缺失的记录(Missing Entries)；
+- 多出来的记录(Extraneous Entries)；
 
 我们要做的就是清理这两种日志。
 
@@ -309,27 +310,27 @@ Leader 变更可能导致日志的不一致，这里展示一种可能的情况�
 
 新的 Leader 必须使 Follower 的日志与自己的日志保持一致，通过：
 
-*   删除 Extraneous Entries；
-*   补齐 Missing Entries；
+- 删除 Extraneous Entries；
+- 补齐 Missing Entries；
 
 Leader 为每个 Follower 保存 `nextIndex`：
 
-*   下一个要发送给 Follower 的日志索引；
-*   初始化为： 1 + Leader 最后一条日志的索引；
+- 下一个要发送给 Follower 的日志索引；
+- 初始化为： 1 + Leader 最后一条日志的索引；
 
 Leader 通过 `nextIndex` 来修复日志。当 `AppendEntries RPC` 一致性检查失败，递减 `nextIndex` 并重试。如下图所示：
 
-![\-w785](https://i.loli.net/2021/02/03/3unHSXWaOFBsUJP.jpg)
+![-w785](https://i.loli.net/2021/02/03/3unHSXWaOFBsUJP.jpg)
 
 对于 a：
 
-*   一开始 `nextIndex` = 11，带上日志 index = 10 & term = 6，检查失败；
-*   `nextIndex` = 10，带上日志 index = 9 & term = 6，检查失败；
-*   如此反复，直到 `nextIndex` = 5，带上日志 index = 4 & term = 4，该日志现在匹配，会在 a 中补齐 Leader 的日志。如此往下补齐。
+- 一开始 `nextIndex` = 11，带上日志 index = 10 & term = 6，检查失败；
+- `nextIndex` = 10，带上日志 index = 9 & term = 6，检查失败；
+- 如此反复，直到 `nextIndex` = 5，带上日志 index = 4 & term = 4，该日志现在匹配，会在 a 中补齐 Leader 的日志。如此往下补齐。
 
 对于 b： 会一直检查到 `nextIndex` = 4 才匹配。值得注意的是，对于 b 这种情况，当 Follower 覆盖不一致的日志时，它将删除所有后续的日志记录（任何无关紧要的记录之后的记录也都是无关紧要的）。如下图所示：
 
-![\-w753](https://i.loli.net/2021/02/03/k4IqB7JaUOndzxA.jpg)
+![-w753](https://i.loli.net/2021/02/03/k4IqB7JaUOndzxA.jpg)
 
 # 4\. 处理旧 Leader
 
@@ -337,9 +338,9 @@ Leader 通过 `nextIndex` 来修复日志。当 `AppendEntries RPC` 一致性检
 
 **任期就是用来发现过时的 Leader**(和 Candidates)：
 
-*   每个 RPC 都包含发送方的任期；
-*   如果发送方的任期太老，无论哪个过程，RPC 都会被拒绝，发送方转变到 Follower 并更新其任期；
-*   如果接收方的任期太老，接收方将转为 Follower，更新它的任期，然后正常的处理 RPC；
+- 每个 RPC 都包含发送方的任期；
+- 如果发送方的任期太老，无论哪个过程，RPC 都会被拒绝，发送方转变到 Follower 并更新其任期；
+- 如果接收方的任期太老，接收方将转为 Follower，更新它的任期，然后正常的处理 RPC；
 
 由于新 Leader 的选举会更新超过半数服务器的任期，旧的 Leader 不能提交新的日志，因为它会联系至少一台多数派集群的节点，然后发现自己任期太老，会转为 Follower 继续工作。
 
@@ -349,23 +350,23 @@ Leader 通过 `nextIndex` 来修复日志。当 `AppendEntries RPC` 一致性检
 
 客户端只将命令发送到 Leader：
 
-*   如果客户端不知道 Leader 是谁，它会和任意一台服务器通信；
-*   如果通信的节点不是 Leader，它会告诉客户端 Leader 是谁；
+- 如果客户端不知道 Leader 是谁，它会和任意一台服务器通信；
+- 如果通信的节点不是 Leader，它会告诉客户端 Leader 是谁；
 
 Leader 直到将命令记录、提交和执行到状态机之前，不会做出响应。
 
 这里的问题是如果 Leader 宕机会导致请求超时：
 
-*   客户端重新发出命令到其他服务器上，最终重定向到新的 Leader
-*   用新的 Leader 重试请求，直到命令被执行
+- 客户端重新发出命令到其他服务器上，最终重定向到新的 Leader
+- 用新的 Leader 重试请求，直到命令被执行
 
 这留下了一个命令可能被执行两次的风险——Leader 可能在执行命令之后但响应客户端之前宕机，此时客户端再去寻找下一个 Leader，同一个命令就会被执行两次——这是不可接受的！
 
 解决办法是：客户端发送给 Leader 的每个命令都带上一个唯一 id
 
-*   Leader 将唯一 id 写到日志记录中
-*   在 Leader 接受命令之前，先检查其日志中是否已经具有该 id
-*   如果 id 在日志中，说明是重复的请求，则忽略新的命令，返回旧命令的响应
+- Leader 将唯一 id 写到日志记录中
+- 在 Leader 接受命令之前，先检查其日志中是否已经具有该 id
+- 如果 id 在日志中，说明是重复的请求，则忽略新的命令，返回旧命令的响应
 
 **每个命令只会被执行一次，这就是所谓的线性化的关键要素**。
 
@@ -375,12 +376,12 @@ Leader 直到将命令记录、提交和执行到状态机之前，不会做出�
 
 系统配置是指：
 
-*   每台服务器的 id 和地址
-*   **系统配置信息是非常重要的，它决定了多数派的组成**
+- 每台服务器的 id 和地址
+- **系统配置信息是非常重要的，它决定了多数派的组成**
 
 首先要意识到，我们不能直接从旧配置切换到新配置，这可能会导致矛盾的多数派。
 
-![\-w977](https://i.loli.net/2021/02/03/JseC43wyEI6jzDA.jpg)
+![-w977](https://i.loli.net/2021/02/03/JseC43wyEI6jzDA.jpg)
 
 如图，系统以三台服务器的配置运行着，此时我们要添加两台服务器。如果我们直接修改配置，他们可能无法完全在同一时间做到配置切换，这会导致 S1 和 S2 形成旧集群的多数派，而同一时间 S3-S5 已经切换到新配置，这会产生两个集群。
 
@@ -392,26 +393,26 @@ Leader 直到将命令记录、提交和执行到状态机之前，不会做出�
 
 Raft 通过共同一致(Joint Consensus)来完成两阶段协议，即：新、旧两种配置上都获得多数派选票。
 
-![\-w842](https://i.loli.net/2021/02/03/uiwta7xnJymeDHT.jpg)
+![-w842](https://i.loli.net/2021/02/03/uiwta7xnJymeDHT.jpg)
 
 第一阶段：
 
-*   Leader 收到 $C\_{new}$ 的配置变更请求后，先写入一条 $C\_{old+new}$ 的日志，配置变更立即生效，然后将日志通过 `AppendEntries RPC` 复制到 Follower 中，收到该 $C\_{old+new}$ 的节点立即应用该配置作为当前节点的配置；
-*   $C\_{old+new}$ 日志复制到多数派节点上时，$C\_{old+new}$ 的日志已提交；
+- Leader 收到 $C\_{new}$ 的配置变更请求后，先写入一条 $C\_{old+new}$ 的日志，配置变更立即生效，然后将日志通过 `AppendEntries RPC` 复制到 Follower 中，收到该 $C\_{old+new}$ 的节点立即应用该配置作为当前节点的配置；
+- $C\_{old+new}$ 日志复制到多数派节点上时，$C\_{old+new}$ 的日志已提交；
 
 $C\_{old+new}$ 日志已提交保证了后续任何 Leader 一定有 $C\_{old+new}$ 日志，Leader 选举过程必须获得旧配置中的多数派和新配置中的多数派同时投票。
 
 第二阶段：
 
-*   $C\_{old+new}$ 日志已提交后，立即写入一条 $C\_{new}$ 的日志，并将该日志通过 `AppendEntries RPC` 复制到 Follower 中，收到 $C\_{new}$ 的节点立即应用该配置作为当前节点的配置；
-*   $C\_{new}$ 日志复制到多数派节点上时，$C\_{new}$ 的日志已提交；在 $C\_{new}$ 日志提交以后，后续的配置都基于 $C\_{new}$ 了；
+- $C\_{old+new}$ 日志已提交后，立即写入一条 $C\_{new}$ 的日志，并将该日志通过 `AppendEntries RPC` 复制到 Follower 中，收到 $C\_{new}$ 的节点立即应用该配置作为当前节点的配置；
+- $C\_{new}$ 日志复制到多数派节点上时，$C\_{new}$ 的日志已提交；在 $C\_{new}$ 日志提交以后，后续的配置都基于 $C\_{new}$ 了；
 
-![\-w907](https://i.loli.net/2021/02/03/6cXKlrEdxshvB3F.jpg)
+![-w907](https://i.loli.net/2021/02/03/6cXKlrEdxshvB3F.jpg)
 
 Joint Consensus 还有一些细节：
 
-*   变更过程中，来自新旧配置的节点都有可能成为 Leader；
-*   如果当前 Leader 不在 $C\_{new}$ 配置里面，一旦 $C\_{new}$ 提交，它必须下台(step down)。
+- 变更过程中，来自新旧配置的节点都有可能成为 Leader；
+- 如果当前 Leader 不在 $C\_{new}$ 配置里面，一旦 $C\_{new}$ 提交，它必须下台(step down)。
 
 如图所示，旧 Leader 不再是新配置的成员之后，还有可能继续服务一小段时间；即旧 Leader 可能在 $C\_{new}$ 配置下继续当 Leader（虽然实质上并不是Leader），直到 $C\_{new}$ 的日志复制到多数派上而 committed；
 
