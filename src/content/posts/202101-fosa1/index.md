@@ -8,6 +8,7 @@ tags:
 canonicalURL: "https://tangwz.com/posts/202101-fosa1/"
 draft: false
 ---
+
 <!-- migrated-from: https://tangwz.com/posts/202101-fosa1/ -->
 
 《软件架构基础（Fundamentals of Software Architecture）》被誉为和《设计数据密集型应用》一样经典的后端书籍，架构师的入门指南。本篇为该书第一章的读书笔记。
@@ -32,10 +33,10 @@ draft: false
 
 整个行业都在努力精确定义“软件架构”，有些称为系统的蓝图，有些定义为开发的路线图。本书关于架构的定义主要从四个方面：
 
-*   系统的结构（Structure）
-*   系统所支持的架构特性、能力（Architecture characteristics）
-*   架构决策（Architecture decisions）
-*   设计原则（Design principles）
+- 系统的结构（Structure）
+- 系统所支持的架构特性、能力（Architecture characteristics）
+- 架构决策（Architecture decisions）
+- 设计原则（Design principles）
 
 **系统的结构指的是系统实现架构风格的类型（如微服务、分层或微内核）。但仅仅通过结构来描述一个架构，并不能完全阐明一个架构。**
 
@@ -123,8 +124,8 @@ draft: false
 
 注重工程实践很重要：
 
-*   首先，软件开发缺乏许多比较成熟的工程学科的特点。例如，土木工程可以比软件工程更准确地预测结构变化。
-*   其次，\*\*软件开发的一个致命弱点是估算–多少时间，多少资源，多少钱？\*\*这种困难一部分在于陈旧的会计无法适应软件开发的探索性；但另一部分是因为我们传统上不擅长估算，部分原因是因为 unknown unknowns。
+- 首先，软件开发缺乏许多比较成熟的工程学科的特点。例如，土木工程可以比软件工程更准确地预测结构变化。
+- 其次，\*\*软件开发的一个致命弱点是估算–多少时间，多少资源，多少钱？\*\*这种困难一部分在于陈旧的会计无法适应软件开发的探索性；但另一部分是因为我们传统上不擅长估算，部分原因是因为 unknown unknowns。
 
 unknown unknowns 是软件系统的克星：没有人知道会出现的东西，却又意外地出现了。例如：某个意外的 bug 出现。
 

@@ -8,6 +8,7 @@ tags:
 canonicalURL: "https://tangwz.com/posts/202101-fosa3/"
 draft: false
 ---
+
 <!-- migrated-from: https://tangwz.com/posts/202101-fosa3/ -->
 
 ## 0\. 写在前面
@@ -38,9 +39,9 @@ draft: false
 
 鉴于模块化的重要性，研究人员提供了各种语言无关的标准来衡量，我们专注于三个关键概念：
 
-*   内聚（Cohesion）
-*   耦合（Coupling）
-*   共生性（Connascence）（注：参考[《UML面向对象设计基础》](https://book.douban.com/subject/10737799/)的翻译）
+- 内聚（Cohesion）
+- 耦合（Coupling）
+- 共生性（Connascence）（注：参考[《UML面向对象设计基础》](https://book.douban.com/subject/10737799/)的翻译）
 
 ## 2\. 内聚（Cohesion）
 
@@ -52,13 +53,13 @@ draft: false
 
 计算机科学家们已经定义了一系列的内聚的衡量标准，从最好到最坏列出如下：
 
-*   功能性内聚（Functional cohesion）：模块内所有元素都为完成同一个功能而存在，共同完成一个单一的功能，模块已不可再分，具有最高的内聚；
-*   顺序内聚（Sequential cohesion）：模块必须顺序执行；
-*   通信内聚（Communicational cohesion）：两个不同操作的模块使用同样的数据。例如，在数据库中添加一条记录，并根据该信息生成一封邮件；
-*   过程内聚（Procedural cohesion）：两个模块必须以特定的次序执行。
-*   时间内聚（Temporal cohesion）：把需要同时执行的动作组合在一起形成的模块。
-*   逻辑内聚（Logical cohesion）：这种模块把几种相关的功能组合在一起， 每次被调用时，由传送给模块参数来确定该模块应完成哪一种功能。
-*   巧合内聚（Coincidental cohesion）：模块内的各个元素之间没有任何联系，只是偶然地被凑到一起；内聚程度最低。
+- 功能性内聚（Functional cohesion）：模块内所有元素都为完成同一个功能而存在，共同完成一个单一的功能，模块已不可再分，具有最高的内聚；
+- 顺序内聚（Sequential cohesion）：模块必须顺序执行；
+- 通信内聚（Communicational cohesion）：两个不同操作的模块使用同样的数据。例如，在数据库中添加一条记录，并根据该信息生成一封邮件；
+- 过程内聚（Procedural cohesion）：两个模块必须以特定的次序执行。
+- 时间内聚（Temporal cohesion）：把需要同时执行的动作组合在一起形成的模块。
+- 逻辑内聚（Logical cohesion）：这种模块把几种相关的功能组合在一起， 每次被调用时，由传送给模块参数来确定该模块应完成哪一种功能。
+- 巧合内聚（Coincidental cohesion）：模块内的各个元素之间没有任何联系，只是偶然地被凑到一起；内聚程度最低。
 
 ![](https://s2.loli.net/2022/10/08/8vpR6lMsAuCDNgb.jpg)
 
@@ -66,36 +67,36 @@ draft: false
 
 Customer：
 
-*   add customer
-*   update customer
-*   get customer
-*   notify customer
-*   get customer orders
-*   cancel customer orders
+- add customer
+- update customer
+- get customer
+- notify customer
+- get customer orders
+- cancel customer orders
 
 或者说将后两个函数剥离出来，分成两个模块：
 
 Customer：
 
-*   add customer
-*   update customer
-*   get customer
-*   notify customer
+- add customer
+- update customer
+- get customer
+- notify customer
 
 Order：
 
-*   get customer orders
-*   cancel customer orders
+- get customer orders
+- cancel customer orders
 
 哪个更好？一如既往，这要看情况：
 
-*   订单只有这两个操作吗？如果是这样，将这些操作放在客户包中维护可能是有意义的；
-*   客户包按预期是否会变得更大？
-*   订单是否需要如此多的客户信息？
+- 订单只有这两个操作吗？如果是这样，将这些操作放在客户包中维护可能是有意义的；
+- 客户包按预期是否会变得更大？
+- 订单是否需要如此多的客户信息？
 
 这些问题代表了软件架构师工作核心的权衡分析。
 
-由于内聚非常主观，计算机科学家制定了一个标准来衡量内聚性，其中 **LCOM(Lack of Cohesion in Methods)** 为著名。这里涉及到的数学公式平时很少用到，在此不再展开，只需要知道有这么一个公式，在需要的时候可以再查询拿出来用。想进一步了解的读者可以查看：[https://en.wikipedia.org/wiki/Programming\_complexity](https://en.wikipedia.org/wiki/Programming_complexity)
+由于内聚非常主观，计算机科学家制定了一个标准来衡量内聚性，其中 **LCOM(Lack of Cohesion in Methods)** 为著名。这里涉及到的数学公式平时很少用到，在此不再展开，只需要知道有这么一个公式，在需要的时候可以再查询拿出来用。想进一步了解的读者可以查看：[https://en.wikipedia.org/wiki/Programming_complexity](https://en.wikipedia.org/wiki/Programming_complexity)
 
 ## 3\. 耦合（Coupling）
 
@@ -160,7 +161,7 @@ myrepo.SaveUser(new User{
 
 多个组件必须就一个特定的算法达成一致。例如：客户端和服务端用相同的算法验证用户身份。这代表一种较高的耦合形式——如果算法细节改变，验证将不再有效。
 
-* * *
+---
 
 **动态共生性：**
 
@@ -184,17 +185,17 @@ email.setSubject("whoops");
 
 ```javascript
 // using bootstrap modal
-$(element).modal('hide')
-$(element).modal('show') // Error!
+$(element).modal("hide");
+$(element).modal("show"); // Error!
 
 // 隐藏一个 modal 大约需要 500ms 的动画，
 // 如果你在这时候直接调用了 'show'，将会发生异常
 
 // 我们必须这样做
-$(element).modal('hide')
-$(element).on('hidden.bs.modal', ()=>{
-    $(element).modal('show') // ok
-})
+$(element).modal("hide");
+$(element).on("hidden.bs.modal", () => {
+  $(element).modal("show"); // ok
+});
 ```
 
 ### 4.8 值共生性（Connascence of Values, CoV）
@@ -233,8 +234,8 @@ Page-Jones 提供了三个使用共生性来提高系统模块化的指南： 1.
 
 Jim Weirich （传奇的软件架构创新者，Ruby 社区活跃人士）简化了上面较为抽象的指导，提供了两个更具体的建议：
 
-*   **程度法则（Rule of Degree）：将强共生性转化为弱共生性。**
-*   **局部性规则（Rule of Locality）：随着软件元素之间距离的增加，应使用较弱的共生性。**
+- **程度法则（Rule of Degree）：将强共生性转化为弱共生性。**
+- **局部性规则（Rule of Locality）：随着软件元素之间距离的增加，应使用较弱的共生性。**
 
 ## 7\. 耦合性和共生性
 
@@ -248,8 +249,8 @@ Jim Weirich （传奇的软件架构创新者，Ruby 社区活跃人士）简化
 
 尽管如此，架构师在应用这些指标来分析和设计系统时，存在几个问题：
 
-*   这些度量从代码层面考察细节，关注代码质量，而不一定是架构。架构师更关注模块如何耦合，而不是耦合程度，例如，架构师关心的是同步或异步通信，而不关心如何实现。
-*   共生性并没有真正解决许多现代架构师必须做出的一个基本决定–在分布式架构（例如：微服务）中，使用同步还是异步通信？在后面会介绍新的方法来思考现代的共生性。
+- 这些度量从代码层面考察细节，关注代码质量，而不一定是架构。架构师更关注模块如何耦合，而不是耦合程度，例如，架构师关心的是同步或异步通信，而不关心如何实现。
+- 共生性并没有真正解决许多现代架构师必须做出的一个基本决定–在分布式架构（例如：微服务）中，使用同步还是异步通信？在后面会介绍新的方法来思考现代的共生性。
 
 虽然对模块化进行了大量的介绍和思考，**开发人员和架构师在实际实施过程中，还是会遇到很多的困难。**
 

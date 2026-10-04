@@ -9,6 +9,7 @@ canonicalURL: "https://tangwz.com/posts/202208-tla-6/"
 ogImage: "./assets/cover.png"
 draft: false
 ---
+
 <!-- migrated-from: https://tangwz.com/posts/202208-tla-6/ -->
 
 ![](./assets/mindnote.png)
@@ -23,11 +24,11 @@ draft: false
 
 Raft 的 TLA+ 规约将系统抽象为以下几个常量：
 
-*   `Server`，节点 ID 集合
-*   `Value`，客户端的一系列请求，发送到 Raft 状态机的值
-*   `Follower, Candidate, Leader`，Raft 节点的三个状态
-*   `Nil`，空的消息
-*   四种消息类型 `RequestVoteRequest`, `RequestVoteResponse`, `AppendEntriesRequest`, `AppendEntriesResponse`
+- `Server`，节点 ID 集合
+- `Value`，客户端的一系列请求，发送到 Raft 状态机的值
+- `Follower, Candidate, Leader`，Raft 节点的三个状态
+- `Nil`，空的消息
+- 四种消息类型 `RequestVoteRequest`, `RequestVoteResponse`, `AppendEntriesRequest`, `AppendEntriesResponse`
 
 ### 1.2、变量
 
@@ -35,20 +36,20 @@ Raft 的 TLA+ 规约包括的变量主要还是和论文 Figure 2 相对应。
 
 所有节点都有：
 
-*   `currentTerm`，当前任期，需要持久化；
-*   `votedFor`，投票信息，需要持久化；
-*   `log`，日志，需要持久化；
-*   `state`，节点状态，三种 `Follower, Candidate, Leader`；
+- `currentTerm`，当前任期，需要持久化；
+- `votedFor`，投票信息，需要持久化；
+- `log`，日志，需要持久化；
+- `state`，节点状态，三种 `Follower, Candidate, Leader`；
 
 Candidate 变量：
 
-*   `votesResponded`，候选者在当前任期收到的 `RequestVote` 响应；
-*   `votesGranted`，候选者收到来自 `RequestVote` 的投票；
+- `votesResponded`，候选者在当前任期收到的 `RequestVote` 响应；
+- `votesGranted`，候选者收到来自 `RequestVote` 的投票；
 
 Leader 变量：
 
-*   `nextIndex`，发送给 Follower 的下一个日志；
-*   `matchIndex`，领导者用来统计计算 `commitIndex`。如果超过半数节点的 `matchIndex >= N` 且任期一致，那么可以更新 `commitIndex = N`。
+- `nextIndex`，发送给 Follower 的下一个日志；
+- `matchIndex`，领导者用来统计计算 `commitIndex`。如果超过半数节点的 `matchIndex >= N` 且任期一致，那么可以更新 `commitIndex = N`。
 
 ![](./assets/variables.png)
 
@@ -78,29 +79,29 @@ Raft 的动作较多，我们重点看节点是如何处理 `RequestVote` 和 `A
 
 接下来的代码比较长，主要分为：
 
-*   **情况 1**，领导者任期更小，或者任期相同但日志一致性检查不通过，拒绝这次请求。
+- **情况 1**，领导者任期更小，或者任期相同但日志一致性检查不通过，拒绝这次请求。
 
 ![](./assets/case1.png)
 
-*   **情况 2**，任期相同，但当前节点是 Candidate 状态，转为 Follower。
+- **情况 2**，任期相同，但当前节点是 Candidate 状态，转为 Follower。
 
 ![](./assets/case2.png)
 
-*   **情况 3**，前面的条件都满足，接受请求。
+- **情况 3**，前面的条件都满足，接受请求。
 
 ![](./assets/case3.png)
 
 但是，情况三根据节点日志不同，又分为多种情况。
 
-*   **情况 3.1**，如果消息体中日志信息为空（即为心跳信息），或者该日志已经存在节点日志中，可能会导致 `commitIndex` 发生变化。
+- **情况 3.1**，如果消息体中日志信息为空（即为心跳信息），或者该日志已经存在节点日志中，可能会导致 `commitIndex` 发生变化。
 
 ![](./assets/case3.1.png)
 
-*   **情况 3.2**，如果日志冲突，将会以领导者的日志为准，删除节点的日志。
+- **情况 3.2**，如果日志冲突，将会以领导者的日志为准，删除节点的日志。
 
 ![](./assets/case3.2.png)
 
-*   **情况 3.3**，如果没有冲突刚刚好，直接插入日志即可。
+- **情况 3.3**，如果没有冲突刚刚好，直接插入日志即可。
 
 ![](./assets/case3.3.png)
 

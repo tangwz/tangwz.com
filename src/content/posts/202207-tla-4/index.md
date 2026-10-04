@@ -9,6 +9,7 @@ canonicalURL: "https://tangwz.com/posts/202207-tla-4/"
 ogImage: "./assets/cover.png"
 draft: false
 ---
+
 <!-- migrated-from: https://tangwz.com/posts/202207-tla-4/ -->
 
 ![](./assets/mindnote.png)
@@ -87,10 +88,10 @@ VARIABLES
 
 两阶段提交的 TLA+ 规约包括 4 个变量
 
-*   `rmState`：用 `rmState[rm]` 表示 rm 的状态，有 4 种可能的状态：“working”, “prepared”, “committed”, “aborted”；
-*   `tmState`：TM 的状态，有 3 种可能的状态：“init”, “committed”, “aborted”；
-*   `tmPrepared`：TM 已收到 `Prepared` 消息的 RM 的集合；
-*   `msgs`：描述正在传输的消息。
+- `rmState`：用 `rmState[rm]` 表示 rm 的状态，有 4 种可能的状态：“working”, “prepared”, “committed”, “aborted”；
+- `tmState`：TM 的状态，有 3 种可能的状态：“init”, “committed”, “aborted”；
+- `tmPrepared`：TM 已收到 `Prepared` 消息的 RM 的集合；
+- `msgs`：描述正在传输的消息。
 
 ```tla+
 Message ==

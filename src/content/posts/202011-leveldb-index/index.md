@@ -8,6 +8,7 @@ tags:
 canonicalURL: "https://tangwz.com/posts/202011-leveldb-index/"
 draft: false
 ---
+
 <!-- migrated-from: https://tangwz.com/posts/202011-leveldb-index/ -->
 
 leveldb 是一个持久化的 key/value 存储，key 和 value 都是任意的字节数组(byte arrays)，并且在存储时，key 值根据用户指定的 comparator 函数进行排序。
@@ -18,25 +19,25 @@ leveldb 是一个持久化的 key/value 存储，key 和 value 都是任意的�
 
 ## 特性
 
-*   keys 和 values 是任意的字节数组。
-*   数据按 key 值排序存储。
-*   调用者可以提供一个自定义的比较函数来重写排序顺序。
-*   提供基本的 `Put(key,value)`，`Get(key)`，`Delete(key)` 操作。
-*   多个更改可以在一个原子批处理中生效。
-*   用户可以创建一个瞬时快照(snapshot)，以获得数据的一致性视图。
-*   在数据上支持向前和向后迭代。
-*   使用 Snappy 压缩库对数据进行自动压缩
-*   与外部交互的操作都被抽象成了接口(如文件系统操作等)，因此用户可以根据接口自定义的操作系统交互。
+- keys 和 values 是任意的字节数组。
+- 数据按 key 值排序存储。
+- 调用者可以提供一个自定义的比较函数来重写排序顺序。
+- 提供基本的 `Put(key,value)`，`Get(key)`，`Delete(key)` 操作。
+- 多个更改可以在一个原子批处理中生效。
+- 用户可以创建一个瞬时快照(snapshot)，以获得数据的一致性视图。
+- 在数据上支持向前和向后迭代。
+- 使用 Snappy 压缩库对数据进行自动压缩
+- 与外部交互的操作都被抽象成了接口(如文件系统操作等)，因此用户可以根据接口自定义的操作系统交互。
 
 ## 局限性
 
-*   这不是一个 SQL 数据库，它没有关系数据模型，不支持 SQL 查询，也不支持索引。
-*   同时只能有一个进程(可能是具有多线程的进程)访问一个特定的数据库。
-*   该程序库没有内置的 client-server 支持，有需要的用户必须自己封装。
+- 这不是一个 SQL 数据库，它没有关系数据模型，不支持 SQL 查询，也不支持索引。
+- 同时只能有一个进程(可能是具有多线程的进程)访问一个特定的数据库。
+- 该程序库没有内置的 client-server 支持，有需要的用户必须自己封装。
 
 ## 性能
 
-下面是运行 db\_bench 程序的性能报告。结果有一些噪声(noisy)，但足以得到一个大概的性能估计。
+下面是运行 db_bench 程序的性能报告。结果有一些噪声(noisy)，但足以得到一个大概的性能估计。
 
 ### 配置
 
@@ -114,15 +115,15 @@ cmake -DCMAKE_BUILD_TYPE=Release .. && cmake --build .
 
 leveldb 对外暴露的接口都在 `include/*.h` 中，用户不应该依赖任何其它目录下的头文件，这些内部 API 可能会在没有警告的情况下被改变。
 
-*   `include/leveldb/db.h`：主要的 DB 接口，从这开始。
-*   `include/leveldb/options.h`： 控制数据库的行为，也控制当个读和写的行为。
-*   `include/leveldb/comparator.h`： 比较函数的抽象。如果你只想对 key 逐字节比较，可以直接使用默认的比较器。如果你想要自定义排序（例如处理不同的字符编码、解码等），可以实现自己的比较器。
-*   `include/leveldb/iterator.h`：迭代数据的接口，你可以从一个 DB 对象获取到一个迭代器。
-*   `include/leveldb/write_batch.h`：原子地将多个操作应用到数据库。
-*   `include/leveldb/slice.h`：类似 string，维护着指向字节数组的指针和对应的长度。
-*   `include/leveldb/status.h`：许多公共接口都会返回 `Status`，用于报告成功或各种错误。
-*   `include/leveldb/env.h`：操作系统环境的抽象，该接口的 posix 实现位于 `util/env_posix.cc` 中.
-*   `include/leveldb/table.h, include/leveldb/table_builder.h`：底层的模块，大多数用户可能不会直接用到。
+- `include/leveldb/db.h`：主要的 DB 接口，从这开始。
+- `include/leveldb/options.h`： 控制数据库的行为，也控制当个读和写的行为。
+- `include/leveldb/comparator.h`： 比较函数的抽象。如果你只想对 key 逐字节比较，可以直接使用默认的比较器。如果你想要自定义排序（例如处理不同的字符编码、解码等），可以实现自己的比较器。
+- `include/leveldb/iterator.h`：迭代数据的接口，你可以从一个 DB 对象获取到一个迭代器。
+- `include/leveldb/write_batch.h`：原子地将多个操作应用到数据库。
+- `include/leveldb/slice.h`：类似 string，维护着指向字节数组的指针和对应的长度。
+- `include/leveldb/status.h`：许多公共接口都会返回 `Status`，用于报告成功或各种错误。
+- `include/leveldb/env.h`：操作系统环境的抽象，该接口的 posix 实现位于 `util/env_posix.cc` 中.
+- `include/leveldb/table.h, include/leveldb/table_builder.h`：底层的模块，大多数用户可能不会直接用到。
 
 # 使用
 
@@ -434,7 +435,7 @@ filename -> permission-bits, length, list of file_block_ids
 file_block_id -> data
 ```
 
-我们可以给上面表示 filename 的 key 增加一个字符前缀，例如 ‘/’，然后给表示 file\_block\_id 的 key 增加另一个不同的前缀，例如 ‘0’，这样这些不同用途的 key 就具有了各自独立的键空间区域，扫描元数据的时候我们就不用读取和缓存大块文件内容数据了。
+我们可以给上面表示 filename 的 key 增加一个字符前缀，例如 ‘/’，然后给表示 file_block_id 的 key 增加另一个不同的前缀，例如 ‘0’，这样这些不同用途的 key 就具有了各自独立的键空间区域，扫描元数据的时候我们就不用读取和缓存大块文件内容数据了。
 
 ### 过滤器
 
@@ -488,7 +489,7 @@ leveldb 将校验和与它存储在文件系统中的所有数据进行关联，
 
 `Options::paranoid_checks` 在数据库打开之前设置为 true ，以使得数据库一旦检测到数据损毁立即报错。根据数据库损坏的部位，报错可能是在打开数据库后，也可能是在后续执行某个操作的时候。该配置默认是关闭状态，即，持久化存储部分损坏数据库也能继续使用。
 
-如果数据库损坏了(当开启 Options::paranoid\_checks 的时候可能就打不开了)，`leveldb::RepairDB()` 函数可以用于对尽可能多的数据进行修复。
+如果数据库损坏了(当开启 Options::paranoid_checks 的时候可能就打不开了)，`leveldb::RepairDB()` 函数可以用于对尽可能多的数据进行修复。
 
 ## 近似空间大小
 

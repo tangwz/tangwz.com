@@ -8,6 +8,7 @@ tags:
 canonicalURL: "https://tangwz.com/posts/202010-paxos-exam/"
 draft: false
 ---
+
 <!-- migrated-from: https://tangwz.com/posts/202010-paxos-exam/ -->
 
 # 试题
@@ -50,7 +51,7 @@ b. 在此期间，该节点**最多**要发送多少次 `Prepare RPC`？给出�
 
 ## 5.
 
-(5 分) 假设提案编号的两个部分（自增 id 和唯一 server\_id）进行了互换，即 `server_id` 位于高位。 a. 这会影响 Paxos 的安全性（Safety）吗？请简单解释你的答案。 b. 这会影响 Paxos 的活性（Liveness）吗？请简单解释你的答案。
+(5 分) 假设提案编号的两个部分（自增 id 和唯一 server_id）进行了互换，即 `server_id` 位于高位。 a. 这会影响 Paxos 的安全性（Safety）吗？请简单解释你的答案。 b. 这会影响 Paxos 的活性（Liveness）吗？请简单解释你的答案。
 
 ## 6.
 
@@ -64,7 +65,7 @@ b. 在此期间，该节点**最多**要发送多少次 `Prepare RPC`？给出�
 
 (10 分) 考虑 Multi-Paxos 的配置变更，旧配置由服务器 1、2 和 3 组成，新配置由服务器 3、4 和 5 组成。假设新配置在日志中第 N 条被 chosen，同时日志记录 N 到 N+α (含)也都被 chosen。假设此时旧服务器 1 和 2 被关闭，因为它们不属于新配置。描述下这可能在系统中引起的问题。
 
-* * *
+---
 
 # 答案
 
@@ -94,59 +95,59 @@ b. 最多是： Leader 节点上每有一个未 chosen 但是 Acceptor 已经接
 
 可能出现的异常行为是：服务器会标记两个不同的 chosen 值。用 2 个竞争的提案，3 节点集群和 2 个日志来举例：
 
-*   S1 完成一轮 Prepare 发送提案编号 n=1.1, index=1 给 S1，S2
-*   S1 只完成 S1（它自己）的 Accept 提案 n=1.1, value = X, index = 1
-*   S2 完成一轮 Prepare 发送提案编号 n=2.2, index=1 给 S2，S3，收到二者包含 `noMoreAccepted=true` 的响应
-*   S2 完成一轮 Accept，S2、S3 收到 n=2.2, value=Y, index=1
-*   S2 标记 index 1 的日志为 chosen
-*   S2 完成一轮 Accept，S1, S2, 和 S3 收到 n=2.2, value=Z, index=2, firstUnchosenIndex=2，此时，S1 将会发生异常：将 n=1.1, value=X 的日志设为 chosen，然后将 X 应用到状态机。这是不正确的，因为实际上是 Y 被 chosen。
+- S1 完成一轮 Prepare 发送提案编号 n=1.1, index=1 给 S1，S2
+- S1 只完成 S1（它自己）的 Accept 提案 n=1.1, value = X, index = 1
+- S2 完成一轮 Prepare 发送提案编号 n=2.2, index=1 给 S2，S3，收到二者包含 `noMoreAccepted=true` 的响应
+- S2 完成一轮 Accept，S2、S3 收到 n=2.2, value=Y, index=1
+- S2 标记 index 1 的日志为 chosen
+- S2 完成一轮 Accept，S1, S2, 和 S3 收到 n=2.2, value=Z, index=2, firstUnchosenIndex=2，此时，S1 将会发生异常：将 n=1.1, value=X 的日志设为 chosen，然后将 X 应用到状态机。这是不正确的，因为实际上是 Y 被 chosen。
 
 ## 5.
 
-a. 不会。因为安全性只需要提案编号唯一，每台服务器的 server\_id 是唯一的，并且有自增 id，所以唯一性得到保证。
+a. 不会。因为安全性只需要提案编号唯一，每台服务器的 server_id 是唯一的，并且有自增 id，所以唯一性得到保证。
 
-b. 会。例如，server\_id 最大的服务器向集群中每一台服务器发出的 `Prepare RPC` 将会永远失败。然后，其它 Proposer 无法继续运行，因为其它服务器的 `minProposal` 对于 Proposer 来说太大了。
+b. 会。例如，server_id 最大的服务器向集群中每一台服务器发出的 `Prepare RPC` 将会永远失败。然后，其它 Proposer 无法继续运行，因为其它服务器的 `minProposal` 对于 Proposer 来说太大了。
 
 ## 6.
 
 不安全。不同的提案必须具有不同的提案编号。下面是一个 3 节点集群的例子：
 
-*   S1 发送 `Prepare(n=1.1)` 至 S1，S2
-*   S1 发送 `Accept(n=1.1, v=v1)` 至 S1
-*   S1 重启
-*   S1 发送 `Prepare(n=1.1)` 至 S2，S3（并且发现还没有被接受的提案）
-*   S1 发送 `Accept(n=1.1, v=v2)` 与 S2，S3
-*   S1 将 v2 被 chosen 返回给客户端
-*   S2 发送 `Prepare(n=2.2)` 至 S1，S2 并收到响应：
-    *   来自 S1: acceptedProposal=1.1, acceptedValue=v1
-    *   来自 S2: acceptedProposal=1.1, acceptedValue=v2
-*   S2 直接选择了 v1 作为提案值
-*   S2 发送 `Accept(n=2.2, v=v1)`至S1，S2，S3
-*   S2 将 v1 被 chosen 返回给客户端
+- S1 发送 `Prepare(n=1.1)` 至 S1，S2
+- S1 发送 `Accept(n=1.1, v=v1)` 至 S1
+- S1 重启
+- S1 发送 `Prepare(n=1.1)` 至 S2，S3（并且发现还没有被接受的提案）
+- S1 发送 `Accept(n=1.1, v=v2)` 与 S2，S3
+- S1 将 v2 被 chosen 返回给客户端
+- S2 发送 `Prepare(n=2.2)` 至 S1，S2 并收到响应：
+  - 来自 S1: acceptedProposal=1.1, acceptedValue=v1
+  - 来自 S2: acceptedProposal=1.1, acceptedValue=v2
+- S2 直接选择了 v1 作为提案值
+- S2 发送 `Accept(n=2.2, v=v1)`至S1，S2，S3
+- S2 将 v1 被 chosen 返回给客户端
 
 可能出现的另一个问题是，崩溃前的请求在崩溃之后才被送到：
 
-*   S1 发送 `Prepare(n=1.1)` 至 S1，S2
-*   S1 发送 `Accept(n=1.1, v=v1)` 至 S1
-*   S1 发送 `Accept(n=1.1)` 至 S2 和 S3，但是它们并没有收到
-*   S1 重启
-*   S1 发送 `Prepare(n=1.1)` 至 S2，S3（并且发现还没有被接受的提案）
-*   S1 发送 `Accept(n=1.1, v=v2)` 至 S2 和 S3
-*   S1 将 v2 被 chosen 返回给客户端
-*   现在，S2 和 S3 收到了（之前的） `Accept(n=1.1, v=v1)` 请求，并且覆盖了 acceptedValue 设为 v1。现在集群的状态是 v1 被 chosen，但是客户端收到 v2 被 chosen。
+- S1 发送 `Prepare(n=1.1)` 至 S1，S2
+- S1 发送 `Accept(n=1.1, v=v1)` 至 S1
+- S1 发送 `Accept(n=1.1)` 至 S2 和 S3，但是它们并没有收到
+- S1 重启
+- S1 发送 `Prepare(n=1.1)` 至 S2，S3（并且发现还没有被接受的提案）
+- S1 发送 `Accept(n=1.1, v=v2)` 至 S2 和 S3
+- S1 将 v2 被 chosen 返回给客户端
+- 现在，S2 和 S3 收到了（之前的） `Accept(n=1.1, v=v1)` 请求，并且覆盖了 acceptedValue 设为 v1。现在集群的状态是 v1 被 chosen，但是客户端收到 v2 被 chosen。
 
 ## 7.
 
 用 5 个节点的 Basic Paxos 举例：
 
-*   S1 发送 `Prepare(n=1.1)` 至 S1, S2, S3（并且发现没有接受的提案）
-*   S5 发送 `Prepare(n=2.5)` 至 S3, S4, S5（并且发现没有接受的提案）
-*   S5 发送 `Accept(n=2.5, v=X)` 至 S2, S3, S5，这时 S2 的 `minProposal` 应该是 2.5
-*   S5 返回 X 被 chosen 给客户端
-*   S1 发送 `Accept(n=1.1, v=Y)` 至 S2，这通常会被拒绝，但是如果 Accept 阶段未更新 S2 的 `minProposal`，这会被接受
-*   S3 发送 `Prepare(n=3.3)` 至 S1, S2, S4（并且发现 n=1.1, v=Y）
-*   S3 发送 `Accept(n=3.3, v=Y)`至 S1, S2, S3, S4, S5
-*   S3 返回 Y 被 chosen 给客户端
+- S1 发送 `Prepare(n=1.1)` 至 S1, S2, S3（并且发现没有接受的提案）
+- S5 发送 `Prepare(n=2.5)` 至 S3, S4, S5（并且发现没有接受的提案）
+- S5 发送 `Accept(n=2.5, v=X)` 至 S2, S3, S5，这时 S2 的 `minProposal` 应该是 2.5
+- S5 返回 X 被 chosen 给客户端
+- S1 发送 `Accept(n=1.1, v=Y)` 至 S2，这通常会被拒绝，但是如果 Accept 阶段未更新 S2 的 `minProposal`，这会被接受
+- S3 发送 `Prepare(n=3.3)` 至 S1, S2, S4（并且发现 n=1.1, v=Y）
+- S3 发送 `Accept(n=3.3, v=Y)`至 S1, S2, S3, S4, S5
+- S3 返回 Y 被 chosen 给客户端
 
 ## 8.
 

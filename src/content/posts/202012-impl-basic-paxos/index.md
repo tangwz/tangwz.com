@@ -8,6 +8,7 @@ tags:
 canonicalURL: "https://tangwz.com/posts/202012-impl-basic-paxos/"
 draft: false
 ---
+
 <!-- migrated-from: https://tangwz.com/posts/202012-impl-basic-paxos/ -->
 
 前文[《理解 Paxos》](https://mp.weixin.qq.com/s/lbauCATMesqTEeIQuCsz9A)只包含伪代码，帮助了理解但又不够爽，既然现在都讲究 **Talk is cheap. Show me the code.** 这次就把文章中的伪代码用 Go 语言实现出来，希望能帮助各位朋友更直观的感受 Paxos 论文中的细节。
@@ -59,18 +60,18 @@ type acceptor struct {
 
 主要成员解释都有注释，简单来说我们需要记录三个信息：
 
-*   `promiseNumber`： 承诺的提案编号
-*   `acceptedNumber`： 接受的提案编号
-*   `acceptedValue`： 接受的提案值
+- `promiseNumber`： 承诺的提案编号
+- `acceptedNumber`： 接受的提案编号
+- `acceptedValue`： 接受的提案值
 
 ## 定义消息结构体
 
 消息结构体定义了 Proposer 和 Acceptor 之间、Acceptor 和 Leaner 之间的通讯协议。最主要的还是 Paxos 的两阶段的四个消息。
 
-*   Phase 1 请求：**提案编号**
-*   Phase 1 响应：如果有被 Accepted 的提案，返回**提案编号**和**提案值**
-*   Phase 2 请求：**提案编号**和**提案值**
-*   Phase 2 响应：Accepted 的**提案编号**和**提案值**
+- Phase 1 请求：**提案编号**
+- Phase 1 响应：如果有被 Accepted 的提案，返回**提案编号**和**提案值**
+- Phase 2 请求：**提案编号**和**提案值**
+- Phase 2 响应：Accepted 的**提案编号**和**提案值**
 
 这样看，我们的消息结构体只需要提案编号和提案值，加上一个消息类型，用来区分是哪个阶段的消息。消息结构体定义在 message.go 文件，具体如下：
 
@@ -149,8 +150,8 @@ func (net *Network) recvFrom(from int, timeout time.Duration) (message, bool) {
 
 这个项目主要使用 go 单元测试来检验正确性，我们主要测试两种场景：
 
-*   TestSingleProposer（单个 Proposer）
-*   TestTwoProposers（多个 Proposer）
+- TestSingleProposer（单个 Proposer）
+- TestTwoProposers（多个 Proposer）
 
 测试代码通过运行 Paxos 后检查 Chosen 返回的提案值是否符合预期。
 
@@ -217,8 +218,8 @@ func (a *acceptor) handlePrepare(args message) (message, bool) {
 }
 ```
 
-*   如果 `args.number` 大于 `acceptor.promiseNumber`，则承诺将不会接收编号小于 `args.number` 的提案（即 `a.promiseNumber = args.number`）。如果之前有提案被 Accepted 的话，响应还应包含 a.acceptedNumber 和 a.acceptedValue。
-*   否则忽略，返回 `false`。
+- 如果 `args.number` 大于 `acceptor.promiseNumber`，则承诺将不会接收编号小于 `args.number` 的提案（即 `a.promiseNumber = args.number`）。如果之前有提案被 Accepted 的话，响应还应包含 a.acceptedNumber 和 a.acceptedValue。
+- 否则忽略，返回 `false`。
 
 ### 第二轮 Accept RPCs 请求阶段：
 
@@ -317,9 +318,9 @@ go test
 
 ### 未来计划
 
-*   实现一个完整的（包含网络和存储的） Paxos
-*   基于 Paxos 实现一个 Paxos KV 存储
-*   实现其它 Paxos 变种
+- 实现一个完整的（包含网络和存储的） Paxos
+- 基于 Paxos 实现一个 Paxos KV 存储
+- 实现其它 Paxos 变种
 
 欢迎各位朋友催更……
 

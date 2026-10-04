@@ -8,6 +8,7 @@ tags:
 canonicalURL: "https://tangwz.com/posts/202010-multi-paxos/"
 draft: false
 ---
+
 <!-- migrated-from: https://tangwz.com/posts/202010-multi-paxos/ -->
 
 分布式系统为了实现**多副本状态机（Replicated state machine）**，常常需要一个多副本日志（Replicated log）系统，[这个原理受到简单的经验常识启发](https://engineering.linkedin.com/distributed-systems/log-what-every-software-engineer-should-know-about-real-time-datas-unifying)：如果日志的内容和顺序都相同，多个进程从同一状态开始，并且以相同的顺序获得相同的输入，那么这些进程将会生成相同的输出，并且结束在相同的状态。
@@ -37,8 +38,8 @@ Replicated log => Replicated state machine
 1.  找到第一个没有 chosen 的日志记录
 2.  运行 Basic Paxos，对这个 index 用客户端请求的提案值进行提案
 3.  Prepare 是否返回 `acceptedValue`？
-    *   是：用 `acceptedValue` 跑完这轮 Paxos，然后回到步骤 1 继续处理
-    *   否：chosen 客户端提案值
+    - 是：用 `acceptedValue` 跑完这轮 Paxos，然后回到步骤 1 继续处理
+    - 否：chosen 客户端提案值
 
 ### 举个例子
 
@@ -46,9 +47,9 @@ Replicated log => Replicated state machine
 
 如图所示，首先，服务器上的每条日志记录可能存在三种状态：
 
-*   已经保存并知道被 chosen 的日志记录，例如 S1 方框加粗的第 1、2、6 条记录（后面会介绍服务器如何知道这些记录已经被 chosen）
-*   已经保存但不知道有没有被 chosen，例如 S1 第 3 条 `cmp` 命令。观察三台服务器上的日志，cmp 其实已经存在两台上达成了多数派，只是 S1 还不知道
-*   空的记录，例如 S1 第 4、5 条记录，S1 在这个位置没有接受过值，但可能在其它服务器接受过：例如 S2 第 4 条接受了 `sub`，S3 第 5 条接受了 `cmp`
+- 已经保存并知道被 chosen 的日志记录，例如 S1 方框加粗的第 1、2、6 条记录（后面会介绍服务器如何知道这些记录已经被 chosen）
+- 已经保存但不知道有没有被 chosen，例如 S1 第 3 条 `cmp` 命令。观察三台服务器上的日志，cmp 其实已经存在两台上达成了多数派，只是 S1 还不知道
+- 空的记录，例如 S1 第 4、5 条记录，S1 在这个位置没有接受过值，但可能在其它服务器接受过：例如 S2 第 4 条接受了 `sub`，S3 第 5 条接受了 `cmp`
 
 我们知道三台机可以容忍一台故障，为了更具体的分析，我们假设此时**是 S3 宕机的情况**。同时，这里的提案值是一条具体的命令。当 S1 收到客户端的请求命令 `jmp` 时，：
 
@@ -64,23 +65,23 @@ Replicated log => Replicated state machine
 
 一般通过以下方式优化：
 
-*   选择一个Leader，任意时刻只有它一个 Proposer，这样可以避免冲突
-*   减少大部分 Prepare 请求，只需要对整个日志进行一次 Prepare，后面大部分日志可以通过一次 Accept 被 chosen
+- 选择一个Leader，任意时刻只有它一个 Proposer，这样可以避免冲突
+- 减少大部分 Prepare 请求，只需要对整个日志进行一次 Prepare，后面大部分日志可以通过一次 Accept 被 chosen
 
 下面谈谈这两个优化。
 
 ## Leader 选举
 
-有很多办法可以进行选举，Lamport 提出了一种简单的方式：让 server\_id 最大的节点成为Leader（在[上篇](http://tangwz.com/post/basic-paxos/)说到提案编号由自增 id 和 server\_id 组成，就是这个 server\_id）。
+有很多办法可以进行选举，Lamport 提出了一种简单的方式：让 server_id 最大的节点成为Leader（在[上篇](/posts/202009-basic-paxos/)说到提案编号由自增 id 和 server_id 组成，就是这个 server_id）。
 
-1.  既然每台服务器都有一个 server\_id，我们就直接让 server\_id 最大的服务器成为 Leader，这意味着每台服务器需要知道其它服务器的 server\_id
+1.  既然每台服务器都有一个 server_id，我们就直接让 server_id 最大的服务器成为 Leader，这意味着每台服务器需要知道其它服务器的 server_id
 2.  为此，每个节点每隔 Tms 向其它服务器发送心跳
-3.  如果一个节点在 2Tms 时间内没有收到比自己 server\_id 更大的心跳，那它自己就转为 Leader，意味着：
-    *   该节点处理客户端请求
-    *   该节点同时担任 Proposer 和 Acceptor
-4.  如果一个节点收到比自己 server\_id 更大的服务器的心跳，那么它就不能成为 Leader，意味着：
-    *   该节点拒绝掉客户端请求，或者将请求重定向到 Leader
-    *   该节点只能担任 Acceptor
+3.  如果一个节点在 2Tms 时间内没有收到比自己 server_id 更大的心跳，那它自己就转为 Leader，意味着：
+    - 该节点处理客户端请求
+    - 该节点同时担任 Proposer 和 Acceptor
+4.  如果一个节点收到比自己 server_id 更大的服务器的心跳，那么它就不能成为 Leader，意味着：
+    - 该节点拒绝掉客户端请求，或者将请求重定向到 Leader
+    - 该节点只能担任 Acceptor
 
 值得注意的是，这是非常简单的策略，这种方式系统中同时有两个 Leader 的概率是较小的。**即使是系统中有两个 Leader，Paxos 也是能正常工作的，只是冲突的概率就大了很多，效率也会降低。**
 
@@ -105,8 +106,8 @@ Replicated log => Replicated state machine
 
 目前为止，通过选主和减少 Prepare 请求之后的 Multi-Paxos 依然不够完整，还需要解决：
 
-*   之前的日志只需要被多数派接受，完整的日志记录需要复制到全部节点
-*   只有 Proposer（也就是Leader） 知道哪些记录被 chosen 了，需要所有的服务器都知道哪些记录被 chosen
+- 之前的日志只需要被多数派接受，完整的日志记录需要复制到全部节点
+- 只有 Proposer（也就是Leader） 知道哪些记录被 chosen 了，需要所有的服务器都知道哪些记录被 chosen
 
 换句话说，我们需要每台机的日志都完整，这样状态机执行日志后才能达到一样的状态。
 
@@ -114,8 +115,8 @@ Replicated log => Replicated state machine
 
 1.  为了让日志尽可能被复制到每台服务器：Leader 在收到多数派 Acceptor 回复后，可以继续做后面的处理，但同时在后台继续对未回复的 Acceptor 进行重试。这样不会影响客户端的响应时间，但这也不能确保完全复制了（例如，如果 Leader 在中途宕机了）
 2.  为了追踪哪些记录是被 chosen 的，我们增加一些内容：
-    *   `acceptedProposal` 代表日志的提案编号，如果第 i 条记录被 chosen，则 `acceptedProposal[i] = 无穷大`（这是因为，只有提案编号更大的提案才能被接受，无穷大则表示无法再被重写了）
-    *   每个节点都维护一个 `firstUnChosenIndex`，表示第一个没有被 chosen 的日志位置。（即第一个 `acceptedProposal[i] != 无穷大`的节点）
+    - `acceptedProposal` 代表日志的提案编号，如果第 i 条记录被 chosen，则 `acceptedProposal[i] = 无穷大`（这是因为，只有提案编号更大的提案才能被接受，无穷大则表示无法再被重写了）
+    - 每个节点都维护一个 `firstUnChosenIndex`，表示第一个没有被 chosen 的日志位置。（即第一个 `acceptedProposal[i] != 无穷大`的节点）
 3.  Leader 告诉 Acceptor 哪些日志被 chosen ：Leader 在向 Acceptor 发送 Accept 请求的时候带上 `firstUnChosenIndex`，这样 Acceptor 收到 Accept 请求的时候，如果第 i 条日志满足 `i < request.firstUnchosenIndex && acceptedProposal[i] == request.proposal`，则标记 i 为 chosen（即设为无穷大）
 
 ![](./assets/full-disclosure.jpg)
@@ -123,13 +124,13 @@ Replicated log => Replicated state machine
 用图示来说明一下，上图表示同一个 Acceptor 节点 Accept 请求前后的 \`\`。该 Acceptor 在 Accept 请求之前的第 6 位的提案编号为 3.4，这时它收到一个提案编号也为 3.4 的 Accept 请求，并且请求的 firstUnchosenIndex = 7，大于之前 3.4 所在的 6，所以**将选中第 6 位，同时因为该请求的 index = 8，acceptedProposal\[8\] == 3.4**
 
 4.  到了这里还需要考虑，Acceptor 的日志条目中仍然可能有一些前任 Leader 留下的提案记录，还没有完成提案的复制或者 chosen 时 Leader 宕机，换了一个 Leader 节点，这时候需要：
-    *   Acceptor 将其 `firstUnchosenIndex` 作为 Accept 请求的响应返回给 Proposer
-    *   Proposer 判断如果 `Acceptor.firstUnChosenIndex < Proposer.firstUnChosenIndex`，则在后台（异步）发送 `Success(index, v)` RPC
-    *   Acceptor 收到 Success RPC 后，更新已经被 chosen 的日志记录：
-        *   acceptedValue\[index\] = v
-        *   acceptedProposal\[index\] = 无穷大
-        *   return firstUnchosenIndex
-        *   如果需要(可能存在多个不确定的状态)，Proposer 发送额外的 Success RPC
+    - Acceptor 将其 `firstUnchosenIndex` 作为 Accept 请求的响应返回给 Proposer
+    - Proposer 判断如果 `Acceptor.firstUnChosenIndex < Proposer.firstUnChosenIndex`，则在后台（异步）发送 `Success(index, v)` RPC
+    - Acceptor 收到 Success RPC 后，更新已经被 chosen 的日志记录：
+      - acceptedValue\[index\] = v
+      - acceptedProposal\[index\] = 无穷大
+      - return firstUnchosenIndex
+      - 如果需要(可能存在多个不确定的状态)，Proposer 发送额外的 Success RPC
 
 总结一下，通过 4 个步骤就可以确保所有的 Acceptor 都最终知道 chosen 的日志记录。在一般的情况，并不需要额外的第 4 步，只有在 Leader 切换时才可能需要第 4 步。
 

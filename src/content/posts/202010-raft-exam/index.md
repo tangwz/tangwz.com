@@ -8,6 +8,7 @@ tags:
 canonicalURL: "https://tangwz.com/posts/202010-raft-exam/"
 draft: false
 ---
+
 <!-- migrated-from: https://tangwz.com/posts/202010-raft-exam/ -->
 
 # 试题
@@ -64,7 +65,7 @@ d.
 
 （10 分）在配置变更过程中，如果当前 Leader 不在 C-new 中，一旦 C-new 的日志记录被提及，它就会下台。然而，这意味着有一段时间，Leader 不属于它所领导的集群（Leader 上存储的当前配置条目是 C-new，它不包括 Leader）。假设修改算法，如果 C-new 不包含 Leader，则使 Leader 在其日志存储了 C-new 时就立即下台。这种方法可能发生的最坏情况是什么？
 
-* * *
+---
 
 # 答案
 
@@ -130,16 +131,16 @@ a. 不安全。这将允许一个服务器在同一任期内投票两次，这�
 
 例如，对于 3 台服务器：
 
-*   S1 获得 S1 和 S2 的投票，并且成为任期 2 的 Leader
-*   S2 重启，丢失了它在任期 2 中投过的票(votedFor)
-*   S3 获得 S2 和 S3 的选票，并且成为任期 2 的第二任 Leader
-*   现在 S1 和 S3 都可以在任期 2 同一 index 的日志记录上提交不同的值。
+- S1 获得 S1 和 S2 的投票，并且成为任期 2 的 Leader
+- S2 重启，丢失了它在任期 2 中投过的票(votedFor)
+- S3 获得 S2 和 S3 的选票，并且成为任期 2 的第二任 Leader
+- 现在 S1 和 S3 都可以在任期 2 同一 index 的日志记录上提交不同的值。
 
 b. 不安全。这将允许已提交的日志不被存储在多数派上，然后将允许同一 index 提交其它不同的值。 例如，对于 3 台服务器：
 
-*   S1 成为任期 2 的 Leader，并在自己和 S2 上追加写了 index=1, term=2, value=X，并设置 committedIndex=1，然后返回已提交的值 X 给客户端
-*   S2 重启，并且丢失了其日志中的记录
-*   S3（具有空的日志）成为任期 3 的 Leader，因为它的空日志也至少与 S2 一样完整。S3 在自己和 S2 上追加写 index=1, term=3, value=Y，并设置committedIndex=1，然后返回已提交的值 Y 给客户端
+- S1 成为任期 2 的 Leader，并在自己和 S2 上追加写了 index=1, term=2, value=X，并设置 committedIndex=1，然后返回已提交的值 X 给客户端
+- S2 重启，并且丢失了其日志中的记录
+- S3（具有空的日志）成为任期 3 的 Leader，因为它的空日志也至少与 S2 一样完整。S3 在自己和 S2 上追加写 index=1, term=3, value=Y，并设置committedIndex=1，然后返回已提交的值 Y 给客户端
 
 ## 7.
 
@@ -147,11 +148,11 @@ b. 不安全。这将允许已提交的日志不被存储在多数派上，然�
 
 下面是一个在 5 台服务器发生这种情况的例子：
 
-*   带有空日志的 S1 成为任期 2 的 Leader，票选来自 S1，S2 和 S3
-*   S1 将 index=1, term=2, value=X 追加写到它自己和 S2
-*   S2 的日志中包含 index=1, term=2, value=X，S2 成为任期 3 的 Leader，票选来自 S2，S4 和 S5
-*   S1 将 index=1, term=2, value=X 追加写到 S3
-*   此时，S1 已经完成了对 index=1, term=2, value=X 的提交，即使它不再是当前任期的 Leader
+- 带有空日志的 S1 成为任期 2 的 Leader，票选来自 S1，S2 和 S3
+- S1 将 index=1, term=2, value=X 追加写到它自己和 S2
+- S2 的日志中包含 index=1, term=2, value=X，S2 成为任期 3 的 Leader，票选来自 S2，S4 和 S5
+- S1 将 index=1, term=2, value=X 追加写到 S3
+- 此时，S1 已经完成了对 index=1, term=2, value=X 的提交，即使它不再是当前任期的 Leader
 
 这种行为是安全的，因为任何新的 Leader 也必须包含该日志记录，因此它将永远存在。
 

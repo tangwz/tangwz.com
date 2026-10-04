@@ -8,6 +8,7 @@ tags:
 canonicalURL: "https://tangwz.com/posts/202102-raft-extension/"
 draft: false
 ---
+
 <!-- migrated-from: https://tangwz.com/posts/202102-raft-extension/ -->
 
 在上篇[《条分缕析 Raft 算法》](https://mp.weixin.qq.com/s/lUbVBVzvNVxhgbcHQBbkkQ)中推导和梳理了 Raft 算法，但仍有一些细节没有包含到，这篇文章作为补充。
@@ -24,9 +25,9 @@ draft: false
 
 不同的压缩方法有几个核心的共同点：
 
-*   **不将压缩决定集中在 Leader 上，每个服务器独立地压缩其已提交的日志**。这就避免了 Leader 将日志传递给已有该日志的 Follower，同时也增强了模块化，减少交互，将整个系统的复杂性最小化。（对于非常小的状态机，基于 Leader 的日志压缩也许更好。）
-*   **将之前的 log 的维护责任从 Raft 转移到状态机**。Raft 要保存最后被丢弃的记录的index和term，用于 `AppendEntries RPC` 一致性检查。同时，也需要保存最新的配置信息：成员变更失败需要回退配置，最近的配置必须保存。
-*   一旦丢弃了前面部分的日志，状态机就承担两个新的责任：1. 如果服务器重启了，需要将最新的快照加载到状态机后再接受 log；此外，2. 需要向较慢的 follower(日志远落后于 Leader)发送一致的状态镜像。
+- **不将压缩决定集中在 Leader 上，每个服务器独立地压缩其已提交的日志**。这就避免了 Leader 将日志传递给已有该日志的 Follower，同时也增强了模块化，减少交互，将整个系统的复杂性最小化。（对于非常小的状态机，基于 Leader 的日志压缩也许更好。）
+- **将之前的 log 的维护责任从 Raft 转移到状态机**。Raft 要保存最后被丢弃的记录的index和term，用于 `AppendEntries RPC` 一致性检查。同时，也需要保存最新的配置信息：成员变更失败需要回退配置，最近的配置必须保存。
+- 一旦丢弃了前面部分的日志，状态机就承担两个新的责任：1. 如果服务器重启了，需要将最新的快照加载到状态机后再接受 log；此外，2. 需要向较慢的 follower(日志远落后于 Leader)发送一致的状态镜像。
 
 ### 1.1 基于内存的状态机的快照
 
@@ -52,8 +53,8 @@ draft: false
 
 copy-on-write 技术允许进行新的更新而不影响写快照。有两个方法来实现：
 
-*   状态机可以用不可变的(immutable)数据结构来实现。因为状态机命令不会 in-place 的方式来修改状态(通常使用追加的方式)，快照任务可以引用之前状态的并把状态一致地写入到快照。
-*   另外，也可以使用操作系统的 copy-on-write。例如，在 Linux 上可以使用 fork 来复制父进程的整个地址空间，然后子进程就可以把状态机的状态写出并退出，整个过程中父进程都可以持续地提供服务。[LogCabin](https://github.com/logcabin/logcabin)中当前使用的就是这种方法。
+- 状态机可以用不可变的(immutable)数据结构来实现。因为状态机命令不会 in-place 的方式来修改状态(通常使用追加的方式)，快照任务可以引用之前状态的并把状态一致地写入到快照。
+- 另外，也可以使用操作系统的 copy-on-write。例如，在 Linux 上可以使用 fork 来复制父进程的整个地址空间，然后子进程就可以把状态机的状态写出并退出，整个过程中父进程都可以持续地提供服务。[LogCabin](https://github.com/logcabin/logcabin)中当前使用的就是这种方法。
 
 #### 1.1.2 何时做快照
 
@@ -73,11 +74,11 @@ copy-on-write 技术允许进行新的更新而不影响写快照。有两个方
 
 这一节回顾快照的主要组件的实现并讨论实现的难点：
 
-*   **保存和加载快照**：保存快照需要对其序列化并写入磁盘，而加载则是反序列化。通过流式接口(streaming interface)可以避免将整个快照缓冲到内存中。可能对流进行压缩并附带一个 checksum 比较好。LogCabin 先把快照写入一个临时文件，当写完并且刷到磁盘后，再把文件改名。这是为了避免server启动的时候加载到部分的快照。
-*   **传输快照**：传输快照牵涉到如何实现 `InstallSnapshot RPC`。传输的性能通常不是非常重要(一个需要这种动作的 Follower 不会参与到日志的 commit 决策中，因此不需要立即完成)。
-*   **消除不安全的日志访问和丢弃日志条目**：最初设计 LogCabin 的时候没有考虑日志压缩，因此代码上假定了如果 entry i 在日志中，那么 entry 1 到 i - 1 也一定在日志中。有了日志压缩，这就不再成立了，前面的 entry 可能已经被丢弃了。这里需要仔细推理和测试。可能对一些强类型的系统做这些是简单的，编译器会强制检查日志访问并处理越界的问题。一旦我们使得所有的日志访问都是安全的，丢弃前面的日志就很直接了。在这之前，我们都只能单独地测试保存、加载和传输快照。
-*   **通过 copy-on-write 并发地做快照**：可能需要重新设计状态机或利用操作系统的 fork。LogCabin 当前使用的是 fork，相比于线程交互性很差，要使其正确工作也有一定的难度。然而，它的代码量很小，而且不需要修改状态机数据结构。
-*   **决定何时做快照**：我们建议**在开发的过程中每应用一条日志就做一个快照，这样便于快速定位问题**。一旦实现完成，就需要增加一个更有效的机制选择什么时候做快照。
+- **保存和加载快照**：保存快照需要对其序列化并写入磁盘，而加载则是反序列化。通过流式接口(streaming interface)可以避免将整个快照缓冲到内存中。可能对流进行压缩并附带一个 checksum 比较好。LogCabin 先把快照写入一个临时文件，当写完并且刷到磁盘后，再把文件改名。这是为了避免server启动的时候加载到部分的快照。
+- **传输快照**：传输快照牵涉到如何实现 `InstallSnapshot RPC`。传输的性能通常不是非常重要(一个需要这种动作的 Follower 不会参与到日志的 commit 决策中，因此不需要立即完成)。
+- **消除不安全的日志访问和丢弃日志条目**：最初设计 LogCabin 的时候没有考虑日志压缩，因此代码上假定了如果 entry i 在日志中，那么 entry 1 到 i - 1 也一定在日志中。有了日志压缩，这就不再成立了，前面的 entry 可能已经被丢弃了。这里需要仔细推理和测试。可能对一些强类型的系统做这些是简单的，编译器会强制检查日志访问并处理越界的问题。一旦我们使得所有的日志访问都是安全的，丢弃前面的日志就很直接了。在这之前，我们都只能单独地测试保存、加载和传输快照。
+- **通过 copy-on-write 并发地做快照**：可能需要重新设计状态机或利用操作系统的 fork。LogCabin 当前使用的是 fork，相比于线程交互性很差，要使其正确工作也有一定的难度。然而，它的代码量很小，而且不需要修改状态机数据结构。
+- **决定何时做快照**：我们建议**在开发的过程中每应用一条日志就做一个快照，这样便于快速定位问题**。一旦实现完成，就需要增加一个更有效的机制选择什么时候做快照。
 
 ### 1.2 基于磁盘的状态机的快照
 
@@ -91,9 +92,9 @@ Disk-based 状态机仍然需要支持向日志落后的 Follower 提供最新�
 
 增量的方法做压缩如 log cleaning 或 LSM tree，是可能的。他们快照的实现会更复杂，但有如下优点：
 
-*   每次只操作数据的一部分，所以压缩的负载随着时间来看是均匀的。
-*   写入磁盘的效率更高。它们使用大范围的、连续的写入。递增清理的方法可以有选择的压缩磁盘中拥有最多可重复使用空间的部分，可以写入更少的数据。
-*   传递快照更为简单，因为它们不会 in-place 地修改磁盘的区域。
+- 每次只操作数据的一部分，所以压缩的负载随着时间来看是均匀的。
+- 写入磁盘的效率更高。它们使用大范围的、连续的写入。递增清理的方法可以有选择的压缩磁盘中拥有最多可重复使用空间的部分，可以写入更少的数据。
+- 传递快照更为简单，因为它们不会 in-place 地修改磁盘的区域。
 
 #### 1.2.2 Log cleaning
 
@@ -101,9 +102,9 @@ Disk-based 状态机仍然需要支持向日志落后的 Follower 提供最新�
 
 Log cleaning 写入时直接追加，日志被切分为多个连续的 Segments。每一个 segment 通过以下三个步骤进行压缩：
 
-*   首先选择要清理的段，这些段累积了大量废弃的记录；
-*   把有效的记录(live entry)从那些段中拷贝到日志的开头
-*   释放那些段的空间
+- 首先选择要清理的段，这些段累积了大量废弃的记录；
+- 把有效的记录(live entry)从那些段中拷贝到日志的开头
+- 释放那些段的空间
 
 为了最小化对正常操作的影响，这个过程应该并发地做。
 
@@ -153,8 +154,8 @@ a 是没有并行优化的，而 b 是进行并行优化的。
 
 Raft 支持 Batch 和 Pipeline，这两者对性能提升都很重要。
 
-*   Batch：Leader 可以一次收集多个客户端 requests，然后一批发送给 Follower。当然，我们也需要有一个最大发送 size 来限制每次最多可以发送多少数据，LogCabin 使用 1M 大小。
-*   Pipeline：如果只是用 batch，Leader 还是需要等待 Follower 返回才能继续后面的流程，我们这里还可以使用 Pipeline 来进行加速。Leader 会维护一个 `nextIndex` 的变量来表示下一个给 Follower 发送的 log 位置，通常情况下，只要 Leader 跟 Follower 建立起了连接，我们都会认为网络是稳定互通的。所以当 Leader 给 Follower 发送了一批 log 之后，它可以直接更新 `nextIndex`，并且立刻发送后面的 log，不需要等待 Follower 的返回。如果网络出现了错误，或者 Follower 返回一些错误，Leader 就重新调整 `nextIndex`，然后重新发送 log。
+- Batch：Leader 可以一次收集多个客户端 requests，然后一批发送给 Follower。当然，我们也需要有一个最大发送 size 来限制每次最多可以发送多少数据，LogCabin 使用 1M 大小。
+- Pipeline：如果只是用 batch，Leader 还是需要等待 Follower 返回才能继续后面的流程，我们这里还可以使用 Pipeline 来进行加速。Leader 会维护一个 `nextIndex` 的变量来表示下一个给 Follower 发送的 log 位置，通常情况下，只要 Leader 跟 Follower 建立起了连接，我们都会认为网络是稳定互通的。所以当 Leader 给 Follower 发送了一批 log 之后，它可以直接更新 `nextIndex`，并且立刻发送后面的 log，不需要等待 Follower 的返回。如果网络出现了错误，或者 Follower 返回一些错误，Leader 就重新调整 `nextIndex`，然后重新发送 log。
 
 `AppendEntries RPC` 一致性检查保证了 pipeline 的安全性，但是，如果 RPC 失败/超时了，Leader 就要将 `nextIndex` 递减回到初始值重来。如果 `AppendEntries RPC` 一致性检查还是失败，Leader 可能进一步递减 `nextIndex` 重试发送前一个记录，或者等待前一个记录被确认。
 
@@ -194,7 +195,6 @@ Raft 的 Leader 向 Follower 的心跳间隔一般都较小，在 100ms 粒度�
 
 4.  [Scaling Raft](https://www.cockroachlabs.com/blog/scaling-RAFT/): [https://www.cockroachlabs.com/blog/scaling-RAFT/](https://www.cockroachlabs.com/blog/scaling-RAFT/)
 
-5.  [RAFT介绍](https://github.com/baidu/braft/blob/master/docs/cn/raft_protocol.md): [https://github.com/baidu/braft/blob/master/docs/cn/raft\_protocol.md](https://github.com/baidu/braft/blob/master/docs/cn/raft_protocol.md)
-
+5.  [RAFT介绍](https://github.com/baidu/braft/blob/master/docs/cn/raft_protocol.md): [https://github.com/baidu/braft/blob/master/docs/cn/raft_protocol.md](https://github.com/baidu/braft/blob/master/docs/cn/raft_protocol.md)
 
 ## 相关阅读

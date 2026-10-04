@@ -14,7 +14,8 @@ import { extractArticleHtml, htmlToMarkdown } from "./lib/content.mjs";
 import { extractMetadata, toFrontmatter } from "./lib/metadata.mjs";
 
 const CANONICAL_POST_DIR_PATTERN = /^20\d{4}-/;
-const MIGRATION_MARKER_PATTERN = /<!--\s*migrated-from:\s*https:\/\/tangwz\.com\/posts\/[^/]+\/\s*-->/;
+const MIGRATION_MARKER_PATTERN =
+  /<!--\s*migrated-from:\s*https:\/\/tangwz\.com\/posts\/[^/]+\/\s*-->/;
 const SHORT_BODY_TEXT_LENGTH = 40;
 
 function cleanText(value) {
@@ -53,10 +54,14 @@ function permalinkFromCanonical($, postDirName) {
 }
 
 function normalizePermalink(value) {
-  const path = String(value ?? "").split(/[?#]/, 1)[0].trim();
+  const path = String(value ?? "")
+    .split(/[?#]/, 1)[0]
+    .trim();
   if (!path) return "";
   const withLeadingSlash = path.startsWith("/") ? path : `/${path}`;
-  return withLeadingSlash.endsWith("/") ? withLeadingSlash : `${withLeadingSlash}/`;
+  return withLeadingSlash.endsWith("/")
+    ? withLeadingSlash
+    : `${withLeadingSlash}/`;
 }
 
 function slugFromPermalink(permalink, fallbackDirName) {
@@ -99,7 +104,9 @@ async function readIndexRecords(sourceRoot) {
   const byPermalink = new Map();
 
   for (const record of records) {
-    const permalink = normalizePermalink(record?.permalink ?? record?.url ?? record?.path);
+    const permalink = normalizePermalink(
+      record?.permalink ?? record?.url ?? record?.path
+    );
     if (permalink) byPermalink.set(permalink, record);
   }
 
@@ -120,7 +127,11 @@ async function discoverPostDirs(sourceRoot) {
     const htmlPath = join(postsRoot, entry.name, "index.html");
     if (!(await exists(htmlPath))) continue;
 
-    postDirs.push({ name: entry.name, path: join(postsRoot, entry.name), htmlPath });
+    postDirs.push({
+      name: entry.name,
+      path: join(postsRoot, entry.name),
+      htmlPath,
+    });
   }
 
   return postDirs.sort((a, b) => a.name.localeCompare(b.name));
@@ -289,7 +300,11 @@ async function migratePost({ sourceRoot, outRoot, indexRecords, postDir }) {
   const permalink = permalinkFromCanonical($, postDir.name);
   const slug = slugFromPermalink(permalink, postDir.name);
   const outputPostDir = join(outRoot, slug);
-  const postReport = postReportBase({ sourceDirName: postDir.name, slug, permalink });
+  const postReport = postReportBase({
+    sourceDirName: postDir.name,
+    slug,
+    permalink,
+  });
 
   await rm(outputPostDir, { recursive: true, force: true });
   await mkdir(outputPostDir, { recursive: true });
@@ -309,7 +324,8 @@ async function migratePost({ sourceRoot, outRoot, indexRecords, postDir }) {
       copiedBySource,
       postReport,
     });
-    if (copiedOgImage && copiedOgImage.startsWith("./assets/")) metadata.ogImage = copiedOgImage;
+    if (copiedOgImage && copiedOgImage.startsWith("./assets/"))
+      metadata.ogImage = copiedOgImage;
   }
 
   const requiredMissing = ["title", "pubDatetime", "description"].filter(
@@ -347,7 +363,9 @@ async function migratePost({ sourceRoot, outRoot, indexRecords, postDir }) {
   postReport.residualHtml = residualHtml(markdown);
 
   if (textLength < SHORT_BODY_TEXT_LENGTH) {
-    postReport.blockers.push(blocker(`Short body text: ${textLength} characters`));
+    postReport.blockers.push(
+      blocker(`Short body text: ${textLength} characters`)
+    );
   }
 
   if (postReport.residualHtml) {
@@ -359,7 +377,9 @@ async function migratePost({ sourceRoot, outRoot, indexRecords, postDir }) {
   }
 
   const frontmatterMetadata =
-    requiredMissing.length > 0 ? fillMissingRequiredMetadata(metadata) : metadata;
+    requiredMissing.length > 0
+      ? fillMissingRequiredMetadata(metadata)
+      : metadata;
   const content = `${toFrontmatter(frontmatterMetadata)}${migrationMarker(permalink)}\n\n${markdown}\n`;
   await writeFile(join(outputPostDir, "index.md"), content);
   postReport.generated = true;
@@ -394,10 +414,17 @@ async function previousGeneratedOutputDirs({ outRoot, reportPath }) {
 }
 
 async function outputDirIsMigrationOwned(outputDir, previousOutputDirs) {
-  return (await containsMigrationMarker(outputDir)) || previousOutputDirs.has(outputDir);
+  return (
+    (await containsMigrationMarker(outputDir)) ||
+    previousOutputDirs.has(outputDir)
+  );
 }
 
-async function cleanStaleOldOutputDirs({ outRoot, currentOutputDirs, previousOutputDirs }) {
+async function cleanStaleOldOutputDirs({
+  outRoot,
+  currentOutputDirs,
+  previousOutputDirs,
+}) {
   if (!(await exists(outRoot))) return [];
 
   const entries = await readdir(outRoot, { withFileTypes: true });
@@ -409,7 +436,8 @@ async function cleanStaleOldOutputDirs({ outRoot, currentOutputDirs, previousOut
     const outputDir = join(outRoot, entry.name);
     if (currentOutputDirs.has(outputDir)) continue;
 
-    if (!(await outputDirIsMigrationOwned(outputDir, previousOutputDirs))) continue;
+    if (!(await outputDirIsMigrationOwned(outputDir, previousOutputDirs)))
+      continue;
 
     await rm(outputDir, { recursive: true, force: true });
     cleanedOutputDirs.push(outputDir);
@@ -418,7 +446,12 @@ async function cleanStaleOldOutputDirs({ outRoot, currentOutputDirs, previousOut
   return cleanedOutputDirs.sort();
 }
 
-export async function runMigration({ sourceRoot, outRoot, reportPath, expectedCount = 25 }) {
+export async function runMigration({
+  sourceRoot,
+  outRoot,
+  reportPath,
+  expectedCount = 25,
+}) {
   if (!sourceRoot) throw new Error("sourceRoot is required");
   if (!outRoot) throw new Error("outRoot is required");
   if (!reportPath) throw new Error("reportPath is required");
@@ -436,13 +469,18 @@ export async function runMigration({ sourceRoot, outRoot, reportPath, expectedCo
 
   const postsRoot = join(sourceRoot, "posts");
   if (!(await exists(postsRoot))) {
-    report.blockers.push(blocker(`Missing source posts directory: ${postsRoot}`));
+    report.blockers.push(
+      blocker(`Missing source posts directory: ${postsRoot}`)
+    );
   }
 
   const indexResult = await readIndexRecords(sourceRoot);
   report.blockers.push(...indexResult.blockers);
   const postDirs = await discoverPostDirs(sourceRoot);
-  const previousOutputDirs = await previousGeneratedOutputDirs({ outRoot, reportPath });
+  const previousOutputDirs = await previousGeneratedOutputDirs({
+    outRoot,
+    reportPath,
+  });
   const currentOutputDirs = new Set();
   for (const postDir of postDirs) {
     currentOutputDirs.add(await outputDirForPostDir({ outRoot, postDir }));
@@ -450,7 +488,9 @@ export async function runMigration({ sourceRoot, outRoot, reportPath, expectedCo
 
   if (postDirs.length !== expectedCount) {
     report.blockers.push(
-      blocker(`Expected ${expectedCount} canonical posts but discovered ${postDirs.length}`)
+      blocker(
+        `Expected ${expectedCount} canonical posts but discovered ${postDirs.length}`
+      )
     );
   }
 
@@ -469,9 +509,12 @@ export async function runMigration({ sourceRoot, outRoot, reportPath, expectedCo
       outputDir = await outputDirForPostDir({ outRoot, postDir });
       const outputExists = await exists(outputDir);
       const outputOwned =
-        outputExists && (await outputDirIsMigrationOwned(outputDir, previousOutputDirs));
+        outputExists &&
+        (await outputDirIsMigrationOwned(outputDir, previousOutputDirs));
       if (outputExists && !outputOwned) {
-        throw new Error(`Refusing to overwrite unmarked output directory: ${outputDir}`);
+        throw new Error(
+          `Refusing to overwrite unmarked output directory: ${outputDir}`
+        );
       }
       cleanupFailedOutput = !outputExists || outputOwned;
 
@@ -485,7 +528,10 @@ export async function runMigration({ sourceRoot, outRoot, reportPath, expectedCo
     } catch (error) {
       const postReport = await failedPostReport({ postDir, error });
       if (cleanupFailedOutput) {
-        await rm(outputDir ?? join(outRoot, postReport.slug), { recursive: true, force: true });
+        await rm(outputDir ?? join(outRoot, postReport.slug), {
+          recursive: true,
+          force: true,
+        });
       }
       report.posts.push(postReport);
     }
@@ -527,7 +573,9 @@ function parseArgs(argv) {
     sourceRoot: args.source,
     outRoot: args.out,
     reportPath: args.report,
-    expectedCount: args["expected-count"] ? Number.parseInt(args["expected-count"], 10) : 25,
+    expectedCount: args["expected-count"]
+      ? Number.parseInt(args["expected-count"], 10)
+      : 25,
   };
 }
 
@@ -551,7 +599,9 @@ async function main() {
   const report = await runMigration(options);
   const blockerCount = report.blockers.length;
 
-  console.log(`Migrated ${report.migratedCount} posts with ${blockerCount} blockers.`);
+  process.stdout.write(
+    `Migrated ${report.migratedCount} posts with ${blockerCount} blockers.\n`
+  );
 
   if (blockerCount > 0) {
     process.exitCode = 1;
@@ -561,7 +611,9 @@ async function main() {
 const currentFile = fileURLToPath(import.meta.url);
 if (process.argv[1] && currentFile === process.argv[1]) {
   main().catch(error => {
-    console.error(error instanceof Error ? error.message : String(error));
+    process.stderr.write(
+      `${error instanceof Error ? error.message : String(error)}\n`
+    );
     process.exitCode = 1;
   });
 }

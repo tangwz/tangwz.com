@@ -23,7 +23,8 @@ function getIdSlug(id: string): string {
 function getPostSlugPath(id: string, filePath: string | undefined): string {
   const pathSegments = getPostPathSegments(filePath);
   const slug = getIdSlug(id);
-  if (pathSegments[pathSegments.length - 1] === slug) return pathSegments.join("/");
+  if (pathSegments[pathSegments.length - 1] === slug)
+    return pathSegments.join("/");
   return pathSegments.length > 0
     ? [...pathSegments, slug].join("/")
     : String(slug);

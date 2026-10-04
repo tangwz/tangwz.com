@@ -8,6 +8,7 @@ tags:
 canonicalURL: "https://tangwz.com/posts/202009-git-merge-vs-rebase/"
 draft: false
 ---
+
 <!-- migrated-from: https://tangwz.com/posts/202009-git-merge-vs-rebase/ -->
 
 > 最近在给 kubernetes 提交代码，k8s 社区要求非常严格，既要分支保持与主干的代码同步，还要一次只能有一条 commit。过程中我错误地使用了一把 git merge 和 git rebase，特此总结一下。
@@ -53,9 +54,9 @@ git rebase master
 
 ## 什么时候用 rebase，什么时候用 merge？
 
-*   用 `merge` 来把分支合并到主干。（废话！）
-*   如果你的分支要跟别人共享，则**不建议**用 `rebase`，因为 `rebase` 会创建不一致的提交历史。
-*   如果只有你个人开发推荐使用 `rebase`。
-*   如果你想保留完整的提交历史，推荐使用 `merge`，`merge` 保留历史 而 `rebase` 重写历史。
-*   `rebase` 还可以压缩、简化历史，通过 `git rebase -i` 可以在分支合并到主干前，整理自己分支的提交历史，把很多细碎的 `commit` 整理成一条详细的 `commit`。
-*   `rebase` 一次只处理一个冲突，`merge` 则一次处理全部冲突。处理冲突 `rebase` 更方便，但如果有很多冲突的话，撤销一个 `rebase` 会比 `merge` 更复杂，`merge` 只需要撤销一次。
+- 用 `merge` 来把分支合并到主干。（废话！）
+- 如果你的分支要跟别人共享，则**不建议**用 `rebase`，因为 `rebase` 会创建不一致的提交历史。
+- 如果只有你个人开发推荐使用 `rebase`。
+- 如果你想保留完整的提交历史，推荐使用 `merge`，`merge` 保留历史 而 `rebase` 重写历史。
+- `rebase` 还可以压缩、简化历史，通过 `git rebase -i` 可以在分支合并到主干前，整理自己分支的提交历史，把很多细碎的 `commit` 整理成一条详细的 `commit`。
+- `rebase` 一次只处理一个冲突，`merge` 则一次处理全部冲突。处理冲突 `rebase` 更方便，但如果有很多冲突的话，撤销一个 `rebase` 会比 `merge` 更复杂，`merge` 只需要撤销一次。

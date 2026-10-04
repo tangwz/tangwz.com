@@ -1,0 +1,46 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="1200"
+  height="630"
+  viewBox="0 0 1200 630"
+>
+  <title>tangwz.com</title>
+  <rect width="1200" height="630" fill="#fefbfb" />
+  <rect
+    x="104"
+    y="42"
+    width="990"
+    height="504"
+    rx="4"
+    fill="#ecebeb"
+    stroke="#222"
+    stroke-width="4"
+  />
+  <rect
+    x="76"
+    y="68"
+    width="990"
+    height="504"
+    rx="4"
+    fill="#fefbfb"
+    stroke="#222"
+    stroke-width="4"
+  />
+  <text
+    x="571"
+    y="337"
+    text-anchor="middle"
+    font-family="monospace"
+    font-size="96"
+    font-weight="700"
+    fill="#222"
+  >
+    tangwz.com
+  </text>
+  <path
+    d="M491 385h160"
+    stroke="#006cac"
+    stroke-width="6"
+    stroke-linecap="round"
+  />
+</svg>
