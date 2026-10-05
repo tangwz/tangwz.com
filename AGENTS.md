@@ -17,13 +17,6 @@
 npm run build
 ```
 
-旧博客迁移相关命令：
-
-```bash
-pnpm migrate:old-blog
-pnpm test:migrate-old-blog
-```
-
 ## 项目结构
 
 - `src/content/posts/`：博客文章源文件。目录型文章使用 `src/content/posts/<slug>/index.md`。
@@ -31,7 +24,6 @@ pnpm test:migrate-old-blog
 - `src/components/`：可复用组件。
 - `src/layouts/`：页面布局。
 - `src/styles/`：全局样式。
-- `scripts/migrate-old-blog/`：旧博客静态 HTML 到 Markdown 的迁移工具。
 
 ## 文章与资源
 
@@ -60,9 +52,7 @@ npm view astro version
 ## 验证建议
 
 - 文章、路由、构建相关改动至少运行 `npm run build`。
-- 旧博客迁移脚本改动至少运行 `pnpm test:migrate-old-blog`，必要时再运行 `pnpm migrate:old-blog`。
-- 迁移内容需要检查：
-  - 生成文章数量和 `migration-report.json` blocker 数量；
+- 文章内容需要检查：
   - 本地图片引用是否存在；
   - 是否残留旧站样式属性或 heading anchor 文本；
   - `dist/posts/<slug>/index.html` 是否存在。
