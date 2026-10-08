@@ -1,0 +1,9 @@
+---
+import View from "@/views/Writing.astro";
+import { getWritingPaths } from "@/utils/getLocalizedPaths";
+import type { GetStaticPaths } from "astro";
+export const getStaticPaths = (options =>
+  getWritingPaths("en", options)) satisfies GetStaticPaths;
+---
+
+<View {...Astro.props} />

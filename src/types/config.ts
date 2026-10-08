@@ -22,9 +22,9 @@ interface SiteConfig {
 }
 
 interface PostsConfig {
-  /** Posts per page on paginated listing pages */
+  /** Items per page in the work library and article lists. */
   perPage?: number;
-  /** Posts shown on the index/home page */
+  /** Featured works shown on the home page. */
   perIndex?: number;
   /**
    * Scheduled posts within this window (ms) of their pubDatetime

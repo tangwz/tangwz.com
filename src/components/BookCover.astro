@@ -1,0 +1,15 @@
+---
+import type { books } from "@/data/creator";
+type Props = { book: (typeof books)[number] };
+const { book } = Astro.props;
+---
+
+<div
+  class:list={["book-cover", `book-${book.color}`]}
+  aria-label={`${book.title} by ${book.author}`}
+>
+  <span class="book-author">{book.author}</span>
+  <span class="book-title">{book.title}</span>
+  <span class="book-subtitle">{book.subtitle}</span>
+  <span class="book-cover-art" aria-hidden="true"></span>
+</div>

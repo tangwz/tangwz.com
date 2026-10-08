@@ -1,8 +1,13 @@
 ---
 import Layout from "./Layout.astro";
 import config from "@/config";
+import { resolveLocale, switchLocaleUrl, type Locale } from "@/i18n/routing";
 
 type Props = {
+  contentLanguage?: string;
+  availableLocales?: readonly Locale[];
+  indexable?: boolean;
+  author?: string;
   title?: string;
   description?: string;
   ogImage?: string;
@@ -13,12 +18,38 @@ type Props = {
 
 const { site } = config;
 
-const { title, description, ogImage, canonicalURL, pubDatetime, modDatetime } =
-  Astro.props;
+const {
+  contentLanguage,
+  availableLocales,
+  indexable,
+  author = site.author,
+  title,
+  description,
+  ogImage,
+  canonicalURL,
+  pubDatetime,
+  modDatetime,
+} = Astro.props;
+
+const locale = resolveLocale(Astro.currentLocale);
+const isFallback = contentLanguage !== undefined && contentLanguage !== locale;
+const resolvedCanonical =
+  canonicalURL ??
+  (isFallback
+    ? new URL(
+        switchLocaleUrl(
+          Astro.url.pathname,
+          resolveLocale(contentLanguage),
+          import.meta.env.BASE_URL
+        ),
+        Astro.site
+      ).href
+    : undefined);
 
 const structuredData = {
   "@context": "https://schema.org",
   "@type": "BlogPosting",
+  inLanguage: contentLanguage ?? Astro.currentLocale ?? site.lang,
   headline: title ?? site.title,
   image: ogImage,
   ...(pubDatetime && { datePublished: pubDatetime.toISOString() }),
@@ -26,14 +57,21 @@ const structuredData = {
   author: [
     {
       "@type": "Person",
-      name: site.author,
+      name: author,
       ...(site.profile && { url: site.profile }),
     },
   ],
 };
 ---
 
-<Layout {title} {description} {ogImage} {canonicalURL}>
+<Layout
+  {title}
+  {description}
+  {ogImage}
+  canonicalURL={resolvedCanonical}
+  indexable={indexable !== false && !isFallback}
+  {availableLocales}
+>
   <Fragment slot="head">
     <!-- Override og:type for article pages -->
     <meta property="og:type" content="article" />

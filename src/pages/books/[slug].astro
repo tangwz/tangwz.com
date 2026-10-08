@@ -1,0 +1,7 @@
+---
+import View from "@/views/Book.astro";
+import { getBookPaths } from "@/utils/getLocalizedPaths";
+export const getStaticPaths = () => getBookPaths("zh");
+---
+
+<View {...Astro.props} />

@@ -1,0 +1,108 @@
+---
+import { useCreatorTranslations } from "@/i18n/creator";
+const tr = useCreatorTranslations(Astro.currentLocale);
+import { getLocalizedVideos } from "@/utils/getLocalizedContent";
+import { getRelativeLocaleUrl } from "astro:i18n";
+import Layout from "@/layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+import VideoCarousel from "@/components/VideoCarousel.astro";
+import VideoCollage from "@/components/VideoCollage.astro";
+import BilibiliIcon from "@/components/BilibiliIcon.astro";
+import Newsletter from "@/components/Newsletter.astro";
+import { creator } from "@/data/creator";
+import { getCreatorVideos } from "@/utils/getCreatorVideos";
+import { getVideoCategories } from "@/utils/videoCategories";
+import config from "@/config";
+const locale = Astro.currentLocale ?? config.site.lang;
+const href = (path: string) => getRelativeLocaleUrl(locale, path);
+const videos = getCreatorVideos(await getLocalizedVideos(locale));
+const featured = videos.filter(video => video.data.featured);
+const channel = creator.bilibiliChannel;
+const categories = getVideoCategories(videos);
+---
+
+<Layout
+  title={`${tr("Videos")} | ${tr(config.site.title)}`}
+  description={tr(
+    "Videos about technology, creativity, and building an independent life, with Bilibili playback and written transcripts."
+  )}
+>
+  <Header />
+  <main id="main-content" class="video-archive">
+    <section class="video-archive-hero">
+      <div class="panel-container archive-hero-grid">
+        <VideoCollage {videos} />
+        <div class="archive-hero-copy">
+          <h1>{tr("My Videos")}</h1>
+          <p class="archive-hero-lead">
+            {
+              tr(
+                "Making videos brings together the things I love: researching an idea, finding the right words, and turning what I learn into something useful. As a programmer, writer, and creator, I share my experiments in focused work, technology, and building an independent life."
+              )
+            }
+          </p>
+          <p>
+            {
+              tr(
+                "Below are videos and their written transcripts. Watch on Bilibili, or take your time with the ideas in writing. These preview episodes show how your own video library will look."
+              )
+            }
+          </p>
+          <a
+            class="button archive-channel-button"
+            href={channel || "#video-library"}
+            target={channel ? "_blank" : undefined}
+            rel={channel ? "noopener noreferrer" : undefined}
+            ><BilibiliIcon />{
+              tr(channel ? "Follow on Bilibili" : "Browse My Videos")
+            }</a
+          >
+        </div>
+      </div>
+    </section>
+    <nav
+      id="video-library"
+      class="archive-categories wide-container"
+      aria-label={tr("Video categories")}
+    >
+      <p>{tr("Browse by category:")}</p><div>
+        {
+          categories.map(category => (
+            <a
+              class:list={["topic-pill", `pill-${category.color}`]}
+              href={`#${category.slug}-club`}
+            >
+              {tr(category.name)}
+            </a>
+          ))
+        }
+      </div>
+    </nav>
+    {
+      featured.length > 0 && (
+        <VideoCarousel
+          title={tr("Featured Videos")}
+          id="featured-videos"
+          videos={featured}
+        />
+      )
+    }
+    {
+      categories.map(category => (
+        <VideoCarousel
+          title={`${tr(category.name)} Club`}
+          id={`${category.slug}-club`}
+          videos={videos.filter(video =>
+            video.data.categories.includes(category.name)
+          )}
+          allLink={href("videos")}
+        />
+      ))
+    }
+    <div class="newsletter-section wide-container">
+      <Newsletter interest="video-archive" />
+    </div>
+  </main>
+  <Footer />
+</Layout>

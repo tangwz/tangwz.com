@@ -24,6 +24,18 @@ npm run build
 - `src/components/`：可复用组件。
 - `src/layouts/`：页面布局。
 - `src/styles/`：全局样式。
+- `src/views/`：Tang 主题的页面视图；路由文件主要负责页面入口。
+- `src/data/`：博客专属的创作者、书籍、课程和 Newsletter 数据。
+
+## 主题同步
+
+- 主题来源为 `https://github.com/tangwz/tang`，当前基线记录在 `theme.lock.json`。
+- 使用 `npm run theme:upgrade` 同步并验证主题，先提交或 stash 当前改动。
+- 主题同步采用三方合并；发生冲突时先解决冲突，不要直接覆盖本地文件或跳过构建。
+- `src/content/`、`src/data/`、`astro-paper.config.ts`、个人 favicon 和 OG 图片属于博客，不从主题覆盖。
+- 中文使用根路径，英文使用 `/en/`；保持既有文章 URL 不变。
+- 不迁入主题示例文章、视频、书籍、课程或公开来信。
+- 同步机制与 GitHub Actions 配置见 `docs/THEME.md`。
 
 ## 文章与资源
 
