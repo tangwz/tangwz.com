@@ -1,0 +1,54 @@
+---
+import { formatDate } from "@/i18n/creator";
+import CreatorIllustration from "./CreatorIllustration.astro";
+import BilibiliIcon from "./BilibiliIcon.astro";
+import type { CreatorVideo } from "@/utils/getCreatorVideos";
+import { getAssetPath } from "@/utils/withBase";
+type Props = { videos: CreatorVideo[] };
+const { videos } = Astro.props;
+---
+
+<div class="video-collage" aria-hidden="true">
+  <div class="collage-elements">
+    <div class="collage-laptop"><CreatorIllustration name="play" /></div>
+    {
+      videos.slice(0, 3).map((video, index) => (
+        <div class:list={["collage-card", `collage-card-${index + 1}`]}>
+          <>
+            <div class="collage-photo">
+              <>
+                <img
+                  src={getAssetPath(video.data.image)}
+                  alt=""
+                  width="480"
+                  height="270"
+                />
+                <span>{video.data.label}</span>
+              </>
+            </div>
+            <div class="collage-card-copy">
+              <>
+                <small>
+                  {formatDate(video.data.pubDatetime, Astro.currentLocale)}
+                </small>
+                <p>{video.data.title}</p>
+              </>
+            </div>
+          </>
+        </div>
+      ))
+    }
+    <div class="collage-bilibili"><BilibiliIcon size={90} /></div>
+    <svg class="collage-trail" viewBox="0 0 500 680" fill="none"
+      ><path
+        d="M53 53C111 36 102 97 66 95m29-34C-21 54-13 217 71 343s275 294 359 288 32-146 4-198"
+        stroke="var(--coral)"
+        stroke-width="4"
+        stroke-linecap="round"></path><path
+        d="m421 166 7 33 8-15 17-3-32-15Zm0-18-3-8m18 12 8-7m-5 26 13 1"
+        stroke="var(--purple)"
+        stroke-width="4"
+        stroke-linejoin="round"></path></svg
+    >
+  </div>
+</div>

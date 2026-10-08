@@ -1,0 +1,129 @@
+---
+import { useCreatorTranslations } from "@/i18n/creator";
+const tr = useCreatorTranslations(Astro.currentLocale);
+import { getRelativeLocaleUrl } from "astro:i18n";
+import Layout from "@/layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+import BookCover from "@/components/BookCover.astro";
+import CreatorIcon from "@/components/CreatorIcon.astro";
+import Newsletter from "@/components/Newsletter.astro";
+import { getBooks } from "@/data/creator";
+import config from "@/config";
+import NotFound from "./NotFound.astro";
+const books = getBooks(Astro.currentLocale ?? config.site.lang);
+if (!books.length) Astro.response.status = 404;
+const href = (path: string) =>
+  getRelativeLocaleUrl(Astro.currentLocale ?? config.site.lang, path);
+---
+
+{
+  books.length > 0 ? (
+    <Layout
+      title={`${tr("Bookshelf")} | ${tr(config.site.title)}`}
+      description={tr(
+        "A place for books, reading notes, and ideas worth returning to."
+      )}
+    >
+      <Header />
+      <>
+        <main id="main-content" class="wide-container">
+          <div class="page-header">
+            <>
+              <span class="eyebrow">{tr("BETWEEN THE PAGES")}</span>
+              <h1>
+                {tr("Good books.")}
+                <br />
+                <em>{tr("Better questions.")}</em>
+              </h1>
+              <p>
+                {tr(
+                  "A place for the ideas that stay with us. Reading notes, questions to carry into your day, and a book of my own in the making."
+                )}
+              </p>
+            </>
+          </div>
+          <p class="content-note">
+            {tr(
+              "A sample reading shelf for this theme. Cover designs are illustrative."
+            )}
+          </p>
+          <div class="library-grid">
+            {books.map(book => (
+              <a class="library-book" href={href(`books/${book.slug}`)}>
+                <>
+                  <BookCover {book} />
+                  <h2>{book.title}</h2>
+                  <p>
+                    {book.author} · {book.category}
+                  </p>
+                  <span class="text-link">
+                    {tr("Open reading note")}{" "}
+                    <CreatorIcon name="arrow" size={17} />
+                  </span>
+                </>
+              </a>
+            ))}
+          </div>
+          <section class="course-teaser">
+            <>
+              <div class="course-teaser-copy">
+                <>
+                  <span class="eyebrow">{tr("A BOOK IN THE MAKING")}</span>
+                  <h2>
+                    {tr("A longer story.")}
+                    <br />
+                    <em>{tr("One page at a time.")}</em>
+                  </h2>
+                  <p>
+                    {tr(
+                      "This is a home for a future book: its story, sample chapters, and eventually a place to get your copy. For now, the next chapter is still being written."
+                    )}
+                  </p>
+                  <a class="button button-dark" href={href("newsletter")}>
+                    {tr("Follow the next chapter")}
+                    <CreatorIcon name="arrow" size={18} />
+                  </a>
+                </>
+              </div>
+              <div class="course-art" aria-hidden="true">
+                <>
+                  <span class="course-art-label">
+                    {tr("A WORK IN PROGRESS")}
+                  </span>
+                  <span class="course-art-title">
+                    {tr("a life")}
+                    <br />
+                    <br />
+                    {tr("making.")}
+                  </span>
+                  <div class="course-art-bottom">
+                    <>
+                      <span>
+                        {tr("NOTES ON BUILDING")}
+                        <br />
+                        {tr("SOMETHING MEANINGFUL.")}
+                      </span>
+                      <CreatorIcon name="pen" size={35} />
+                    </>
+                  </div>
+                  <span class="course-sticker">
+                    {tr("A FUTURE")}
+                    <br />
+                    {tr("BOOK ↗")}
+                  </span>
+                </>
+              </div>
+            </>
+          </section>
+          <div class="newsletter-section">
+            <Newsletter />
+          </div>
+        </main>
+        <Footer />
+      </>
+    </Layout>
+  ) : (
+    <NotFound />
+  )
+}

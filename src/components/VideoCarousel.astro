@@ -1,0 +1,162 @@
+---
+import { useCreatorTranslations, formatDate } from "@/i18n/creator";
+const tr = useCreatorTranslations(Astro.currentLocale);
+import { contentSlug } from "@/i18n/routing";
+import { getRelativeLocaleUrl } from "astro:i18n";
+import CreatorIcon from "./CreatorIcon.astro";
+import type { CreatorVideo } from "@/utils/getCreatorVideos";
+import { getAssetPath } from "@/utils/withBase";
+import config from "@/config";
+type Props = {
+  videos: CreatorVideo[];
+  title: string;
+  id: string;
+  allLink?: string;
+};
+const { videos, title, id, allLink } = Astro.props;
+const locale = Astro.currentLocale ?? config.site.lang;
+const href = (path: string) => getRelativeLocaleUrl(locale, path);
+---
+
+<section
+  class="archive-section"
+  id={id}
+  aria-labelledby={`${id}-heading`}
+  data-video-carousel
+>
+  <div class="archive-heading wide-container">
+    <div class="archive-title">
+      <h2 id={`${id}-heading`}>{title}</h2>{
+        allLink && (
+          <a class="text-link" href={allLink}>
+            {tr("All Videos")}
+          </a>
+        )
+      }
+    </div><div class="carousel-controls">
+      <button
+        type="button"
+        data-direction="-1"
+        aria-label={`${tr("Previous")} ${title}`}
+        aria-controls={`${id}-track`}
+        ><span class="arrow-back"><CreatorIcon name="arrow" /></span></button
+      ><button
+        type="button"
+        data-direction="1"
+        aria-label={`${tr("Next")} ${title}`}
+        aria-controls={`${id}-track`}><CreatorIcon name="arrow" /></button
+      >
+    </div>
+  </div>
+  <div
+    class="archive-track"
+    id={`${id}-track`}
+    tabindex="0"
+    role="region"
+    aria-label={title}
+  >
+    {
+      videos.map(video => (
+        <article class="archive-card">
+          <a
+            class="archive-thumbnail"
+            href={href(`videos/${contentSlug(video.id)}`)}
+            tabindex="-1"
+            aria-hidden="true"
+          >
+            <>
+              <img
+                src={getAssetPath(video.data.image)}
+                alt=""
+                width="800"
+                height="450"
+                loading="lazy"
+              />
+              <span class="archive-art-label">{video.data.label}</span>
+              {video.data.sample && (
+                <span class="archive-preview-label">{tr("Theme preview")}</span>
+              )}
+            </>
+          </a>
+          <div class="archive-card-copy">
+            <>
+              <time datetime={video.data.pubDatetime.toISOString()}>
+                {formatDate(video.data.pubDatetime, Astro.currentLocale)}
+              </time>
+              <h3>
+                <a href={href(`videos/${contentSlug(video.id)}`)}>
+                  {video.data.title}
+                </a>
+              </h3>
+              <a
+                class="text-link"
+                href={href(`videos/${contentSlug(video.id)}`)}
+              >
+                {tr("View")} <CreatorIcon name="arrow" size={20} />
+              </a>
+            </>
+          </div>
+        </article>
+      ))
+    }
+  </div>
+</section>
+<script>
+  let carouselController = new AbortController();
+  function setupCarousels() {
+    document
+      .querySelectorAll<HTMLElement>("[data-video-carousel]")
+      .forEach(section => {
+        if (section.dataset.bound) return;
+        section.dataset.bound = "true";
+        const track = section.querySelector<HTMLElement>(".archive-track");
+        const buttons =
+          section.querySelectorAll<HTMLButtonElement>("[data-direction]");
+        if (!track) return;
+        const update = () =>
+          buttons.forEach(button => {
+            button.disabled =
+              button.dataset.direction === "-1"
+                ? track.scrollLeft <= 2
+                : track.scrollLeft + track.clientWidth >= track.scrollWidth - 2;
+          });
+        const move = (direction: number) => {
+          const card = track.querySelector<HTMLElement>(".archive-card");
+          track.scrollBy({
+            left:
+              direction *
+              ((card?.getBoundingClientRect().width ?? track.clientWidth) + 16),
+            behavior: window.matchMedia("(prefers-reduced-motion: reduce)")
+              .matches
+              ? "instant"
+              : "smooth",
+          });
+        };
+        buttons.forEach(button =>
+          button.addEventListener("click", () =>
+            move(Number(button.dataset.direction))
+          )
+        );
+        track.addEventListener("keydown", event => {
+          if (
+            event.target !== track ||
+            !["ArrowLeft", "ArrowRight"].includes(event.key)
+          )
+            return;
+          event.preventDefault();
+          move(event.key === "ArrowLeft" ? -1 : 1);
+        });
+        track.addEventListener("scroll", update, { passive: true });
+        window.addEventListener("resize", update, {
+          signal: carouselController.signal,
+        });
+        update();
+      });
+  }
+  document.addEventListener("astro:before-swap", () => {
+    carouselController.abort();
+    carouselController = new AbortController();
+  });
+  setupCarousels();
+  document.addEventListener("astro:page-load", setupCarousels);
+</script>

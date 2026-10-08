@@ -1,0 +1,29 @@
+---
+type Props = { destination: string };
+const { destination } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Moving to the main site</title>
+    <meta name="robots" content="noindex, follow" />
+    <link rel="canonical" href={new URL(destination, Astro.site)} />
+    <script is:inline define:vars={{ destination }}>
+      const target = new URL(destination, window.location.origin);
+      target.search = window.location.search;
+      target.hash = window.location.hash;
+      window.location.replace(target.href);
+    </script>
+    <meta http-equiv="refresh" content={`0;url=${destination}`} />
+  </head>
+  <body>
+    <p>
+      The preview is now part of the main site. <a href={destination}
+        >Continue</a
+      >
+    </p>
+  </body>
+</html>

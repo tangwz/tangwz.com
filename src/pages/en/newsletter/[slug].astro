@@ -1,0 +1,7 @@
+---
+import View from "@/views/Letter.astro";
+import { getLetterPaths } from "@/utils/getLocalizedPaths";
+export const getStaticPaths = () => getLetterPaths("en");
+---
+
+<View {...Astro.props} />

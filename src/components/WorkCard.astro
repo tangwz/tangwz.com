@@ -1,0 +1,92 @@
+---
+import { useCreatorTranslations, formatDate } from "@/i18n/creator";
+const tr = useCreatorTranslations(Astro.currentLocale);
+import BookCover from "@/components/BookCover.astro";
+import CreatorIcon from "@/components/CreatorIcon.astro";
+import type { WorkItem } from "@/utils/getWorks";
+type Props = { work: WorkItem };
+const { work } = Astro.props;
+const labels = {
+  article: "Article",
+  video: "Video & transcript",
+  reading: "Reading note",
+  letter: "Newsletter",
+};
+const actions = {
+  article: "Read article",
+  video: "Watch & read",
+  reading: "Read my notes",
+  letter: "Read the letter",
+};
+---
+
+<article
+  class={`portfolio-work-card work-${work.type}`}
+  data-work-type={work.type}
+>
+  <a class="portfolio-work-link" href={work.href}>
+    <div class="portfolio-work-media" aria-hidden="true">
+      {
+        work.image && (
+          <img
+            src={work.image}
+            alt=""
+            width="720"
+            height="450"
+            loading="lazy"
+          />
+        )
+      }
+      {
+        work.type === "video" && (
+          <>
+            <span class="portfolio-video-label">{work.label}</span>
+            <span class="portfolio-play">
+              <CreatorIcon name="play" size={22} />
+            </span>
+          </>
+        )
+      }
+      {work.book && <BookCover book={work.book} />}
+      {
+        work.type === "letter" && (
+          <div class="portfolio-letter-art">
+            <CreatorIcon name="mail" size={36} />
+            <span>
+              {tr("The Sunday ")}
+              <>
+                <br />
+                <strong>{tr("Edit.")}</strong>
+              </>
+            </span>
+            <small>{work.label}</small>
+          </div>
+        )
+      }
+    </div>
+    <div class="portfolio-work-copy">
+      {work.sample && <span class="work-sample-label">{tr("Example")}</span>}
+      <div class="portfolio-work-meta">
+        <span class="portfolio-work-type">{tr(labels[work.type])}</span>
+        {
+          work.date && (
+            <time datetime={work.date.toISOString()}>
+              {formatDate(
+                work.date,
+                Astro.currentLocale,
+                "short",
+                work.timezone
+              )}
+            </time>
+          )
+        }
+        {work.type === "reading" && <span>{work.label}</span>}
+      </div>
+      <h3>{work.title}</h3>
+      <p>{work.description}</p>
+      <span class="portfolio-work-action"
+        >{tr(actions[work.type])} <CreatorIcon name="arrow" size={20} /></span
+      >
+    </div>
+  </a>
+</article>

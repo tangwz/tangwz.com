@@ -1,0 +1,9 @@
+Source: https://github.com/google/fonts/tree/main/ofl/notosanssc
+Original file: NotoSansSC[wght].ttf
+Downloaded: 2026-10-06
+License: SIL Open Font License 1.1 (Noto-Sans-SC-LICENSE.txt)
+
+noto-sans-sc-medium.ttf is a static wght=500 instance created with
+FontTools 4.66.1 varLib.instancer. The full original character coverage
+is retained. It is used only to render Chinese Open Graph images.
+The reserved font name "Source" is not used as the primary family name.

@@ -1,53 +1,114 @@
 ---
 import { Font } from "astro:assets";
 import { ClientRouter } from "astro:transitions";
-import { getRelativeLocaleUrl } from "astro:i18n";
 import { resolveDefaultOgImagePath } from "@/utils/resolveDefaultOgImagePath";
 import { getAssetPath } from "@/utils/withBase";
+import {
+  switchLocaleUrl,
+  resolveLocale,
+  locales,
+  type Locale,
+} from "@/i18n/routing";
+import { translate } from "@/i18n/creator";
+import { getRelativeLocaleUrl } from "astro:i18n";
 import config from "@/config";
 import "@/styles/global.css";
+import "@/styles/creator.css";
+import "@/styles/editorial.css";
+import "@/styles/portfolio.css";
 
 type Props = {
   title?: string;
   description?: string;
   ogImage?: string;
   canonicalURL?: string;
+  /** Use native navigation on pages that manage their own filter history. */
+  clientRouting?: boolean;
+  indexable?: boolean;
+  availableLocales?: readonly Locale[];
 };
 
 const { site } = config;
 
 const {
-  title = site.title,
-  description = site.description,
-  ogImage = resolveDefaultOgImagePath(config),
+  clientRouting = true,
+  indexable = true,
+  availableLocales = locales,
+  title = translate(Astro.currentLocale, site.title),
+  description = translate(Astro.currentLocale, site.description),
+  ogImage = resolveDefaultOgImagePath(config, Astro.currentLocale),
   canonicalURL = new URL(Astro.url.pathname, Astro.site).href,
 } = Astro.props;
 
 const socialImageURL = new URL(ogImage, Astro.site ?? Astro.url);
-const rssHref = getRelativeLocaleUrl(
-  Astro.currentLocale ?? config.site.lang,
-  "rss.xml"
-);
+const locale = resolveLocale(Astro.currentLocale);
+const defaultLocale = availableLocales.includes(resolveLocale(site.lang))
+  ? resolveLocale(site.lang)
+  : availableLocales[0];
+const rssHref = getRelativeLocaleUrl(locale, "rss.xml").replace(/\/+$/, "");
 ---
 
 <!doctype html>
 <html
   dir={site.dir ?? "ltr"}
   lang={Astro.currentLocale ?? site.lang}
-  class="overflow-y-scroll scroll-smooth"
+  class="scroll-smooth"
+  data-theme-mode={config.features.lightAndDarkMode ? "auto" : "light"}
 >
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/svg+xml" href={getAssetPath("favicon.svg")} />
-    <link rel="icon" href={getAssetPath("favicon.ico")} />
     <link rel="canonical" href={canonicalURL} />
+    {
+      availableLocales.map(language => (
+        <link
+          rel="alternate"
+          hreflang={language === "zh" ? "zh-CN" : "en"}
+          href={
+            new URL(
+              switchLocaleUrl(
+                Astro.url.pathname,
+                language,
+                import.meta.env.BASE_URL
+              ),
+              Astro.site
+            )
+          }
+        />
+      ))
+    }
+    {
+      defaultLocale && (
+        <link
+          rel="alternate"
+          hreflang="x-default"
+          href={
+            new URL(
+              switchLocaleUrl(
+                Astro.url.pathname,
+                defaultLocale,
+                import.meta.env.BASE_URL
+              ),
+              Astro.site
+            )
+          }
+        />
+      )
+    }
     <meta name="generator" content={Astro.generator} />
 
     <!-- Font -->
     <Font
-      cssVariable="--font-google-sans-code"
-      preload={[{ subset: "latin", weight: 400, style: "normal" }]}
+      cssVariable="--font-arimo"
+      preload={[
+        { weight: 400, style: "normal" },
+        { weight: 500, style: "normal" },
+      ]}
+    />
+    <Font
+      cssVariable="--font-fraunces"
+      preload={[{ weight: 600, style: "normal" }]}
     />
 
     <!-- Primary meta -->
@@ -55,10 +116,22 @@ const rssHref = getRelativeLocaleUrl(
     <meta name="title" content={title} />
     <meta name="description" content={description} />
     <meta name="author" content={site.author} />
+    {!indexable && <meta name="robots" content="noindex, follow" />}
     <link rel="sitemap" href={getAssetPath("sitemap-index.xml")} />
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
+    <meta property="og:locale" content={locale === "zh" ? "zh_CN" : "en_US"} />
+    {
+      availableLocales
+        .filter(language => language !== locale)
+        .map(language => (
+          <meta
+            property="og:locale:alternate"
+            content={language === "zh" ? "zh_CN" : "en_US"}
+          />
+        ))
+    }
     <meta property="og:site_name" content={site.title} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
@@ -101,18 +174,25 @@ const rssHref = getRelativeLocaleUrl(
     -->
     <script is:inline>
       (function () {
-        const stored = localStorage.getItem("theme");
+        let stored;
+        try {
+          stored = localStorage.getItem("theme");
+        } catch {}
+        if (stored !== "light" && stored !== "dark") stored = null;
         const prefersDark = window.matchMedia(
           "(prefers-color-scheme: dark)"
         ).matches;
-        const theme = stored ?? (prefersDark ? "dark" : "light");
-        document.firstElementChild?.setAttribute("data-theme", theme);
-        // Expose value so theme.ts can skip re-detection.
-        window.__theme = { value: theme };
+        const root = document.firstElementChild;
+        const theme =
+          root?.getAttribute("data-theme-mode") === "light"
+            ? "light"
+            : (stored ?? (prefersDark ? "dark" : "light"));
+        root?.setAttribute("data-theme", theme);
+        root?.classList.toggle("dark", theme === "dark");
       })();
     </script>
 
-    <ClientRouter />
+    {clientRouting && <ClientRouter />}
   </head>
   <body
     class="bg-background font-app text-foreground selection:bg-accent/75 selection:text-accent-foreground flex min-h-svh flex-col"

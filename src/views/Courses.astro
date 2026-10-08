@@ -1,0 +1,131 @@
+---
+import { useCreatorTranslations } from "@/i18n/creator";
+const tr = useCreatorTranslations(Astro.currentLocale);
+import Layout from "@/layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+import CreatorIcon from "@/components/CreatorIcon.astro";
+import Newsletter from "@/components/Newsletter.astro";
+import { getCourses } from "@/data/creator";
+import config from "@/config";
+import NotFound from "./NotFound.astro";
+const course = getCourses(Astro.currentLocale ?? config.site.lang)[0];
+if (!course) Astro.response.status = 404;
+---
+
+{
+  course ? (
+    <Layout
+      title={`${tr("Courses")} | ${tr(config.site.title)}`}
+      description={tr(
+        "Practical courses on creating, building, and developing an independent business. In development."
+      )}
+    >
+      <>
+        <Header />
+        <main id="main-content" data-pagefind-body class="wide-container">
+          <>
+            <div class="page-header">
+              <>
+                <span class="eyebrow">
+                  <span class="status-dot" />
+                  {tr("SOMETHING GOOD IS GROWING")}
+                </span>
+                <h1>
+                  {tr("Make your next chapter")}
+                  <br />
+                  <em>{tr("your own.")}</em>
+                </h1>
+                <p>
+                  {tr(
+                    "Practical learning for thoughtful people who want to create, build, and make their skills useful to the world."
+                  )}
+                </p>
+              </>
+            </div>
+            <section class="course-teaser">
+              <>
+                <div class="course-teaser-copy">
+                  <>
+                    <span class="eyebrow">{course.status}</span>
+                    <h2>{course.name}</h2>
+                    <p>{course.description}</p>
+                    <a class="button button-dark" href="#course-updates">
+                      {tr("Get future course updates")}
+                      <CreatorIcon name="arrow" size={18} />
+                    </a>
+                  </>
+                </div>
+                <div class="course-art" aria-hidden="true">
+                  <>
+                    <span class="course-art-label">
+                      {tr("A FIELD GUIDE FOR")}
+                    </span>
+                    <span class="course-art-title">
+                      {tr("the")}
+                      <br />
+                      <br />
+                      {tr("creator.")}
+                    </span>
+                    <div class="course-art-bottom">
+                      <>
+                        <span>
+                          {tr("BUILD A LIFE.")}
+                          <br />
+                          {tr("NOT JUST A LIVING.")}
+                        </span>
+                        <CreatorIcon name="spark" size={40} />
+                      </>
+                    </div>
+                    <span class="course-sticker">
+                      {tr("COMING")}
+                      <br />
+                      {tr("SOON ↗")}
+                    </span>
+                  </>
+                </div>
+              </>
+            </section>
+            <section class="course-modules">
+              <div class="section-heading">
+                <div>
+                  <>
+                    <span class="eyebrow">
+                      {tr("THE JOURNEY, STEP BY STEP")}
+                    </span>
+                    <h2>
+                      {tr("What we're ")}
+                      <em>{tr("working on.")}</em>
+                    </h2>
+                  </>
+                </div>
+              </div>
+              {course.modules.map((module, index) => (
+                <details>
+                  <>
+                    <summary>
+                      <span>0{index + 1}</span>
+                      {module.title}
+                    </summary>
+                    <p>{module.description}</p>
+                  </>
+                </details>
+              ))}
+              <p class="content-note">
+                {tr(
+                  "A proposed course outline for the theme. The programme, timing, and pricing will be announced when ready."
+                )}
+              </p>
+            </section>
+            <div id="course-updates" class="newsletter-section">
+              <Newsletter interest="independent-creator" />
+            </div>
+          </>
+        </main>
+        <Footer />
+      </>
+    </Layout>
+  ) : (
+    <NotFound />
+  )
+}

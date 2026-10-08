@@ -1,4 +1,4 @@
-import { defineAstroPaperConfig } from "./src/types/config";
+import { defineAstroPaperConfig } from "./src/types/config.ts";
 
 export default defineAstroPaperConfig({
   site: {
@@ -13,7 +13,7 @@ export default defineAstroPaperConfig({
     dir: "ltr",
   },
   posts: {
-    perPage: 4,
+    perPage: 9,
     perIndex: 4,
     scheduledPostMargin: 15 * 60 * 1000,
   },

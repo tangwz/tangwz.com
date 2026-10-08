@@ -1,0 +1,39 @@
+---
+import { useCreatorTranslations } from "@/i18n/creator";
+const tr = useCreatorTranslations(Astro.currentLocale);
+import ArticleCover from "./ArticleCover.astro";
+import CreatorIcon from "./CreatorIcon.astro";
+import type { RelatedContentItem } from "@/types/relatedContent";
+type Props = { items: RelatedContentItem[]; kind?: "article" | "video" };
+const { items, kind = "article" } = Astro.props;
+---
+
+{
+  items.length > 0 && (
+    <section
+      class="related-content wide-container"
+      aria-label={tr(kind === "video" ? "More videos" : "Continue reading")}
+      data-pagefind-ignore
+    >
+      {items.map(item => (
+        <article class="related-card">
+          <div class="related-card-cover">
+            <ArticleCover
+              title={item.title}
+              image={item.image}
+              color={item.color ?? "blue"}
+            />
+          </div>
+          <h2>
+            <a href={item.href}>{item.title}</a>
+          </h2>
+          <p>{item.description}</p>
+          <a class="text-link" href={item.href}>
+            {tr(kind === "video" ? "Watch & Read" : "Continue Reading")}
+            <CreatorIcon name="arrow" size={18} />
+          </a>
+        </article>
+      ))}
+    </section>
+  )
+}

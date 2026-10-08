@@ -1,0 +1,9 @@
+---
+import View from "@/views/Tag.astro";
+import { getTagPaths } from "@/utils/getLocalizedPaths";
+import type { GetStaticPaths } from "astro";
+export const getStaticPaths = (options =>
+  getTagPaths("en", options)) satisfies GetStaticPaths;
+---
+
+<View {...Astro.props} />

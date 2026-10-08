@@ -1,0 +1,7 @@
+---
+import View from "@/views/Video.astro";
+import { getVideoPaths } from "@/utils/getLocalizedPaths";
+export const getStaticPaths = () => getVideoPaths("zh");
+---
+
+<View {...Astro.props} />

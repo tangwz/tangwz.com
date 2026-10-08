@@ -33,7 +33,14 @@ const datetime = dayjs(isModified ? modDatetime : pubDatetime).tz(
   postTimezone ?? config.site.timezone
 );
 
-const date = datetime.format("D MMM, YYYY");
+const date = datetime
+  .toDate()
+  .toLocaleDateString(Astro.currentLocale === "zh" ? "zh-CN" : "en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: postTimezone ?? config.site.timezone,
+  });
 ---
 
 <div

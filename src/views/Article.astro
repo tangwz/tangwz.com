@@ -1,0 +1,119 @@
+---
+import { useCreatorTranslations } from "@/i18n/creator";
+const tr = useCreatorTranslations(Astro.currentLocale);
+import { type CollectionEntry, render } from "astro:content";
+import PostLayout from "@/layouts/PostLayout.astro";
+import EditorialPage from "@/components/EditorialPage.astro";
+import { getPostUrl } from "@/utils/getPostPaths";
+import AdjacentPostNav from "@/pages/posts/[...slug]/_components/AdjacentPostNav.astro";
+import EditPost from "@/pages/posts/[...slug]/_components/EditPost.astro";
+import { getRelativeLocaleUrl } from "astro:i18n";
+import { getLocaleAnchors } from "@/utils/getLocaleAnchors";
+import config from "@/config";
+import { isCreatorPost } from "@/utils/getCreatorPosts";
+import { getCoverImagePath } from "@/utils/withBase";
+import { getContentLocales } from "@/utils/getLocalizedContent";
+import { resolveLocale } from "@/i18n/routing";
+
+type AdjacentPost = {
+  id: string;
+  title: string;
+  filePath: string | undefined;
+} | null;
+
+type Props = {
+  post: CollectionEntry<"posts">;
+  relatedPosts: CollectionEntry<"posts">[];
+  prevPost: AdjacentPost;
+  nextPost: AdjacentPost;
+};
+
+const { post, prevPost, nextPost, relatedPosts } = Astro.props;
+const locale = resolveLocale(Astro.currentLocale ?? config.site.lang);
+const availableLocales = await getContentLocales(post);
+const relatedItems = relatedPosts.map(item => ({
+  title: item.data.title,
+  description: item.data.description,
+  href: getPostUrl(item.id, item.filePath, locale),
+  image: getCoverImagePath(item.data.coverImage),
+  color: item.data.coverColor,
+}));
+
+const {
+  title,
+  description,
+  ogImage: initOgImage,
+  canonicalURL,
+  pubDatetime,
+  modDatetime,
+  tags,
+  author,
+  timezone,
+  coverImage,
+  coverColor,
+} = post.data;
+
+const { Content, headings } = await render(post);
+const localeAnchors = await getLocaleAnchors(post, headings, locale);
+
+let ogImageUrl: string | undefined;
+
+if (typeof initOgImage === "string") {
+  ogImageUrl = initOgImage;
+} else if (initOgImage?.src) {
+  ogImageUrl = initOgImage.src;
+}
+
+if (!ogImageUrl && config.features.dynamicOgImage && isCreatorPost(post)) {
+  const postUrl = getPostUrl(post.id, post.filePath, locale).replace(
+    /\/+$/,
+    ""
+  );
+  ogImageUrl = `${postUrl}/index.png`;
+}
+
+const ogImage = ogImageUrl ? new URL(ogImageUrl, Astro.site).href : undefined;
+---
+
+<PostLayout
+  indexable={isCreatorPost(post)}
+  {author}
+  contentLanguage={post.data.lang}
+  {availableLocales}
+  title={`${title} | ${tr(config.site.title)}`}
+  description={description}
+  ogImage={ogImage}
+  canonicalURL={canonicalURL}
+  pubDatetime={pubDatetime}
+  modDatetime={modDatetime}
+>
+  <EditorialPage
+    {title}
+    date={pubDatetime}
+    {timezone}
+    {author}
+    category={tags.find(tag => tag !== "theme-sample") ?? "Ideas"}
+    {headings}
+    {localeAnchors}
+    sample={post.data.sample}
+    {coverColor}
+    coverImage={getCoverImagePath(coverImage)}
+    {canonicalURL}
+    contentLanguage={post.data.lang}
+    searchable={isCreatorPost(post) && availableLocales.includes(locale)}
+    relatedItems={isCreatorPost(post) ? relatedItems : []}
+  >
+    <Content />
+    <div slot="after">
+      {
+        config.features.showBackButton && (
+          <a class="back-link" href={getRelativeLocaleUrl(locale, "works/")}>
+            {tr("← Back to my work")}
+          </a>
+        )
+      }
+      <EditPost {post} hideEditPost={post.data.hideEditPost} />
+      {!isCreatorPost(post) && <AdjacentPostNav {prevPost} {nextPost} />}
+    </div>
+  </EditorialPage>
+</PostLayout>

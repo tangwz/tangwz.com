@@ -11,6 +11,9 @@ function getPostPathSegments(filePath: string | undefined): string[] {
       .filter(path => path !== "")
       .filter(path => !path.startsWith("_"))
       .slice(0, -1)
+      .filter(
+        (segment, index) => index !== 0 || !["en", "zh"].includes(segment)
+      )
       .map(segment => slugifyStr(segment)) ?? []
   );
 }

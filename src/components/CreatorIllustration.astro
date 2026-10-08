@@ -1,0 +1,88 @@
+---
+type Props = { name: "pen" | "play" | "book" | "code" };
+const { name } = Astro.props;
+---
+
+<svg
+  viewBox="0 0 120 100"
+  fill="none"
+  stroke="var(--ink)"
+  stroke-width="2.5"
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  aria-hidden="true"
+>
+  {
+    name === "play" || name === "code" ? (
+      <>
+        <rect
+          x="16"
+          y="13"
+          width="88"
+          height="65"
+          rx="5"
+          fill="var(--illustration-color)"
+          stroke="var(--illustration-color)"
+        />
+        <rect
+          x="20"
+          y="19"
+          width="80"
+          height="56"
+          rx="2"
+          fill="var(--paper)"
+          stroke="none"
+        />
+        <path
+          d="M16 78 4 85c29 5 83 5 112 0l-12-7"
+          fill="var(--illustration-color)"
+          stroke="var(--illustration-color)"
+        />
+        <path d="M5 86c32 3 80 3 110 0" />
+        {name === "play" ? (
+          <>
+            <circle
+              cx="60"
+              cy="47"
+              r="17"
+              fill="var(--illustration-color)"
+              stroke="none"
+            />
+            <path d="m55 38 15 9-15 9V38Z" fill="white" stroke-width="1.5" />
+          </>
+        ) : (
+          <path d="m48 37-12 10 12 10m24-20 12 10-12 10M64 31l-8 32" />
+        )}
+      </>
+    ) : name === "book" ? (
+      <>
+        <path
+          d="M59 25C44 16 24 16 10 22v58c17-5 35-3 49 6 15-9 33-11 50-6V22c-14-6-34-6-50 3Z"
+          fill="var(--illustration-color)"
+          stroke="none"
+        />
+        <path d="M59 25v61M17 31c10-3 24-2 34 3m-34 12c10-3 24-2 34 3m17-15c10-5 22-6 32-3m-32 18c10-5 22-6 32-3" />
+        <path d="m84 15 6-8m7 14 10-3" />
+      </>
+    ) : (
+      <>
+        <rect
+          x="15"
+          y="12"
+          width="67"
+          height="78"
+          rx="4"
+          fill="var(--paper)"
+          stroke="var(--illustration-color)"
+          stroke-width="5"
+        />
+        <path d="M27 30h40M27 43h32M27 56h20" />
+        <path
+          d="m54 81 6-19 39-39c5-5 14 4 9 9L69 72l-15 9Z"
+          fill="var(--illustration-color)"
+        />
+        <path d="m91 30 10 10M60 63l9 9" />
+      </>
+    )
+  }
+</svg>
