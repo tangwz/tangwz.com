@@ -3,6 +3,13 @@ import { readdir, readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import config from "../astro-paper.config.ts";
+import { parseFrontmatter } from "@astrojs/markdown-remark";
+import {
+  formulaCoverageErrors,
+  inspectPage,
+  sampleNotices,
+  sourceFormulas,
+} from "./site-content.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const homepage = await readFile(join(root, "dist/index.html"), "utf8");
@@ -80,8 +87,62 @@ assert.ok(
   "Render the configured About page title."
 );
 assert.match(about, /<article\b[^>]*>[\s\S]+<\/article>/);
-const works = await readFile(join(root, "dist/works/index.html"), "utf8");
-assert.ok(!works.includes("theme-sample"));
+async function filesIn(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  return (
+    await Promise.all(
+      entries.map(entry => {
+        const path = join(directory, entry.name);
+        return entry.isDirectory() ? filesIn(path) : [path];
+      })
+    )
+  ).flat();
+}
+
+const translations = JSON.parse(
+  await readFile(join(root, "src/i18n/messages/zh.json"), "utf8")
+);
+const notices = sampleNotices
+  .flatMap(value => [value, translations[value]])
+  .filter(Boolean);
+const rendered = new Map();
+const articleKey = (title, language) => JSON.stringify([title, language]);
+for (const path of await filesIn(join(root, "dist"))) {
+  if (!path.endsWith(".html")) continue;
+  const page = inspectPage(await readFile(path, "utf8"), notices);
+  assert.deepEqual(page.errors, [], path);
+  if (page.article && page.language === page.article.language) {
+    const key = articleKey(page.article.title, page.article.language);
+    rendered.set(key, [...(rendered.get(key) ?? []), ...page.formulas]);
+  }
+}
+
+const expected = new Map();
+for (const path of await filesIn(source)) {
+  if (!/\.(md|mdx)$/.test(path) || /[/\\]_[^/\\]*$/.test(path)) continue;
+  const markdown = await readFile(path, "utf8");
+  const { frontmatter } = parseFrontmatter(markdown);
+  if (
+    frontmatter.draft ||
+    frontmatter.template ||
+    new Date(frontmatter.pubDatetime).getTime() -
+      config.posts.scheduledPostMargin >
+      Date.now()
+  )
+    continue;
+  assert.ok(!frontmatter.sample, `Published theme sample: ${path}`);
+  const key = articleKey(frontmatter.title, frontmatter.lang ?? "zh");
+  expected.set(key, [
+    ...(expected.get(key) ?? []),
+    ...(await sourceFormulas(markdown)),
+  ]);
+}
+let formulas = 0;
+for (const [key, values] of expected) {
+  assert.ok(rendered.has(key), `Missing original article: ${key}`);
+  assert.deepEqual(formulaCoverageErrors(values, rendered.get(key)), [], key);
+  formulas += values.length;
+}
 process.stdout.write(
-  `Blog migration validated: ${count} legacy articles, Chinese root, About and RSS.\n`
+  `Blog migration validated: ${count} legacy articles, ${formulas} formulas, no theme samples, Chinese root, About and RSS.\n`
 );

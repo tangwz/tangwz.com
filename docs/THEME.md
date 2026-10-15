@@ -13,7 +13,7 @@ git diff --stat
 git diff
 ```
 
-`theme:check` 只报告当前版本和上游版本。`theme:upgrade` 同步源码、按锁文件安装依赖、执行测试并构建。独立执行同步时使用 `npm run theme:update`；执行后还需安装依赖并验证。同步不提交代码，也不发布网站。
+`theme:check` 只报告当前版本和上游版本。`theme:upgrade` 同步源码、按锁文件安装依赖、执行测试并构建，随后安装匹配版本的 Chromium 并验证生产页面布局。浏览器版本已缓存时不会重复下载。独立执行同步时使用 `npm run theme:update`；执行后还需安装依赖并验证。同步不提交代码，也不发布网站。
 
 需要指定分支、标签或完整 commit SHA 时：
 
@@ -24,6 +24,8 @@ pnpm test
 pnpm lint
 pnpm format:check
 npm run build:release
+pnpm exec playwright install chromium
+npm run check:layout
 ```
 
 `--ref` 会保存到锁文件；如果临时固定了旧 commit，恢复跟随主分支时需再次指定 `--ref main`。
@@ -32,11 +34,11 @@ npm run build:release
 
 `.github/workflows/update-theme.yml` 合入默认分支后，每小时检查一次 `tang/main`。可在 Actions 手动执行 **Update Tang theme**，也支持 `tang-theme-updated` 类型的 `repository_dispatch` 事件。GitHub 的定时任务可能延迟，手动执行适合需要立即同步的情况。
 
-工作流维护一个 `codex/update-tang-theme` 分支和一个普通更新 PR。已有分支会先合并博客默认分支，再同步主题；全程使用普通提交和 push。测试、lint、格式检查及发布构建通过后才推送候选版本并创建或更新 PR。没有差异时不安装依赖、不创建 PR。冲突或验证失败时工作流失败，不推送候选版本。更新需要审核合并，随后由博客原有部署流程发布。
+工作流维护一个 `codex/update-tang-theme` 分支和一个普通更新 PR。已有分支会先合并博客默认分支，再同步主题；全程使用普通提交和 push。测试、lint、格式检查、发布构建及浏览器布局检查通过后才推送候选版本并创建或更新 PR。没有差异时不安装依赖、不创建 PR。冲突或验证失败时工作流失败，不推送候选版本。更新需要审核合并，随后由博客原有部署流程发布。
 
 启用前检查博客仓库的 **Settings → Actions → General → Workflow permissions**，允许 GitHub Actions 创建 Pull Request；仓库或组织策略可能禁用这一能力。工作流使用 `GITHUB_TOKEN`，无需额外密钥即可访问公开主题和维护本仓库 PR。
 
-由 `GITHUB_TOKEN` 创建的 PR 或 push 通常不会触发另一个 Actions workflow。因此本工作流在创建 PR 前完成全部验证，并把运行链接写入 PR。如果分支保护要求独立 PR CI，配置仓库 secret `THEME_SYNC_TOKEN`：使用仅授权博客仓库、具备 **Contents: Read and write**、**Pull requests: Read and write** 权限的 fine-grained PAT。该 token 的 push 会触发现有 CI。主题同步不修改工作流文件，不需要 Workflows 写权限。
+由 `GITHUB_TOKEN` 创建的 PR 或 push 通常不会触发另一个 Actions workflow。因此本工作流在创建 PR 前完成全部验证，并把运行链接写入 PR。如果分支保护要求独立 PR CI，配置仓库 secret `THEME_SYNC_TOKEN`：使用仅授权博客仓库、具备 **Contents: Read and write**、**Pull requests: Read and write** 权限的 fine-grained PAT。该 token 创建或更新的 PR 会触发现有 CI。主题同步不修改工作流文件，不需要 Workflows 写权限。普通 CI 只响应 PR 的代码更新或重新打开，避免与 push 触发重复执行。
 
 当前仓库没有生产部署工作流；本机制准备并验证更新 PR，不自动发布。
 
@@ -52,6 +54,8 @@ npm run build:release
 `package.json` 按字段合并，保留博客名称和同步命令，同时同步主题依赖。新增主题文件如果与博客文件重名且内容不同，会报告冲突。上游删除的文件只有在本地未修改时才删除。图片等二进制文件如果双方都修改，会报告冲突。
 
 个人配置集中在 `astro-paper.config.ts`、`src/data/` 和内容目录。通用视觉和行为建议在 `tang` 修改，再同步到博客，减少长期分叉。同步脚本不引入主题的示例文章、视频、书籍、课程和公开来信，也不引入 `/design/` 演示路由。
+
+保留上游英文页面、动态 OG 生成器及暂时没有内容的页面入口，避免维护功能裁剪分支。仅删除未引用的 DM Sans 和 Instrument Serif 字体文件；上游未修改这些资产时，同步会保留本地删除。上游开始修改或使用这些资产时，应评估并恢复所需文件，不要用排除规则掩盖依赖变化。博客专项检查、浏览器配置和 `tests/` 属于博客，不从主题覆盖。
 
 ## 博客适配
 
@@ -75,6 +79,8 @@ pnpm format:check
 npm run build:release
 ```
 
-测试覆盖三方合并、个人内容保护、新增文件重名、删除冲突、语言路由映射和重复同步。构建检查覆盖 canonical、站内链接、图片、RSS、sitemap 和 Pagefind；博客专项检查还验证原有文章地址、中文首页和 About 内容。
+测试覆盖三方合并、个人内容保护、新增文件重名、删除冲突、语言路由映射、重复同步和未引用资产的本地删除。构建检查覆盖 canonical、站内链接、图片、RSS、sitemap 和 Pagefind；博客专项检查验证原有文章地址、中文首页和 About 内容，并根据已发布文章的 Markdown 核对每个公式及其重复次数，扫描所有 HTML（包括 noindex 页面）的示例标记和中英文示例说明。普通代码片段不会被当作公式或示例标记。
+
+`check:layout` 针对真实生产产物，检查中英文作品库在 1218px 桌面视口下的三列网格、完整行分页和最后一页，以及 768px、390px 视口下的两列、单列和水平溢出。页面大小从配置读取，不固定文章数量。该检查在普通 CI 和主题更新流程中都会执行，因此缺失 CSS 或回退到每页四篇会阻止更新通过。
 
 GitHub Actions 行为参考：[定时与手动触发](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows)、[token 与 workflow 触发](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)。

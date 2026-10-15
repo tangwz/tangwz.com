@@ -69,6 +69,8 @@ jobs:
           pnpm lint
           pnpm format:check
           npm run build:release
+          pnpm exec playwright install --with-deps chromium
+          pnpm run check:layout
 
       - name: Commit and open or update the PR
         if: steps.sync.outputs.changed == 'true'
@@ -79,7 +81,7 @@ jobs:
           fi
           git push origin "HEAD:$THEME_BRANCH"
           revision=$(node -p 'JSON.parse(require("fs").readFileSync("theme.lock.json", "utf8")).revision')
-          printf 'Update the Tang theme to [%s](https://github.com/tangwz/tang/commit/%s), preserving personal content, site settings and local adaptations.\n\nValidation: tests, lint, formatting and the production release build passed in [this workflow run](%s/%s/actions/runs/%s).\n' \
+          printf 'Update the Tang theme to [%s](https://github.com/tangwz/tang/commit/%s), preserving personal content, site settings and local adaptations.\n\nValidation: tests, lint, formatting, the production release build and browser layout checks passed in [this workflow run](%s/%s/actions/runs/%s).\n' \
             "$revision" "$revision" "$GITHUB_SERVER_URL" "$GH_REPO" "$GITHUB_RUN_ID" > "$RUNNER_TEMP/tang-update.md"
           number=$(gh pr list --head "$THEME_BRANCH" --base "$BASE_BRANCH" --state open --json number --jq '.[0].number // empty')
           if [ -n "$number" ]; then

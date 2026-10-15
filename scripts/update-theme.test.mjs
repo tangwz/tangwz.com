@@ -57,6 +57,10 @@ test("theme scope excludes personal content, configuration and demo routes", () 
     "public/tangwz-og.png",
     ".github/workflows/ci.yml",
     "scripts/update-theme.mjs",
+    "scripts/check-site.mjs",
+    "scripts/site-content.mjs",
+    "playwright.config.ts",
+    "tests/layout/works.spec.ts",
   ])
     assert.equal(isThemeFile(path), false, path);
   assert.equal(isThemeFile("src/styles/portfolio.css"), true);
@@ -233,4 +237,20 @@ test("binary assets update cleanly and reject divergent local edits", async t =>
   await put(root, path, base);
   await update(previous, revision);
   assert.deepEqual(await readFile(join(root, path)), incoming);
+});
+
+test("locally removed unused assets stay removed across unrelated updates", async t => {
+  const { source, root, put, commit, update } = await fixture(t);
+  const font = "src/assets/fonts/dm-sans.ttf";
+  await put(source, font, Buffer.from([0, 1, 2]));
+  await put(source, "src/styles/portfolio.css", "old");
+  const previous = commit();
+  await put(root, "src/styles/portfolio.css", "old");
+  await put(source, "src/styles/portfolio.css", "new");
+  const revision = commit();
+  assert.deepEqual(await update(previous, revision), [
+    "src/styles/portfolio.css",
+  ]);
+  await assert.rejects(readFile(join(root, font)), { code: "ENOENT" });
+  assert.deepEqual(await update(revision, revision), []);
 });

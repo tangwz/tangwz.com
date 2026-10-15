@@ -12,10 +12,12 @@ pnpm test
 pnpm lint
 pnpm format:check
 npm run build
+pnpm exec playwright install chromium
+npm run check:layout
 npm run preview
 ```
 
-构建产物为 `dist/`。构建包含类型检查、静态页面生成、Pagefind 索引、主题产物检查和博客专项检查。发布前使用 `npm run build:release` 验证真实域名。
+构建产物为 `dist/`。构建包含类型检查、静态页面生成、Pagefind 索引、主题产物检查和博客专项检查；专项检查逐篇核对公式并阻止主题示例内容进入产物。`check:layout` 使用 Chromium 验证桌面网格、分页和移动端布局。发布前使用 `npm run build:release` 验证真实域名。
 
 ## 主题更新
 

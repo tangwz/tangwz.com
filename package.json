@@ -11,6 +11,7 @@
     "test": "node --experimental-strip-types --test src/i18n/*.test.mjs src/scripts/*.test.mjs src/utils/*.test.mjs scripts/*.test.mjs",
     "check:build": "node --experimental-strip-types scripts/check-build.mjs",
     "check:site": "node --experimental-strip-types scripts/check-site.mjs",
+    "check:layout": "playwright test",
     "release:check": "node --experimental-strip-types scripts/check-release.mjs",
     "build:release": "node --experimental-strip-types scripts/check-release.mjs --config-only && npm run build && npm run release:check",
     "preview": "astro preview",
@@ -20,8 +21,10 @@
     "format": "prettier --write .",
     "lint": "eslint .",
     "theme:update": "node scripts/update-theme.mjs",
-    "theme:upgrade": "npm run theme:update && pnpm install --frozen-lockfile && npm test && npm run build",
-    "theme:check": "node scripts/update-theme.mjs --check"
+    "theme:upgrade": "npm run theme:update && pnpm install --frozen-lockfile && npm test && npm run build && pnpm exec playwright install chromium && npm run check:layout",
+    "theme:check": "node scripts/update-theme.mjs --check",
+    "migrate:old-blog": "node scripts/migrate-old-blog/migrate.mjs --source .cache/tangwz.github.io --out src/content/posts --report migration-report.json",
+    "test:migrate-old-blog": "node --test scripts/migrate-old-blog/*.test.mjs"
   },
   "dependencies": {
     "@astrojs/markdown-remark": "^7.2.0",
@@ -46,10 +49,12 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
     "@pagefind/default-ui": "^1.5.2",
+    "@playwright/test": "1.64.1",
     "@shikijs/transformers": "^4.3.0",
     "@tailwindcss/typography": "^0.5.20",
     "@types/lodash.kebabcase": "^4.1.9",
     "@typescript-eslint/parser": "^8.62.0",
+    "cheerio": "1.2.0",
     "eslint": "^10.6.0",
     "eslint-plugin-astro": "^2.1.1",
     "hast-util-from-html": "^2.0.3",
@@ -57,6 +62,7 @@
     "prettier": "3.9.3",
     "prettier-plugin-astro": "0.14.1",
     "prettier-plugin-tailwindcss": "^0.8.0",
+    "turndown": "7.2.4",
     "typescript": "^6.0.3"
   },
   "packageManager": "pnpm@11.3.0"

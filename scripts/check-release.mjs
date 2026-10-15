@@ -37,7 +37,7 @@ if (!errors.length && !process.argv.includes("--config-only")) {
     );
   if (info.dirty || !info.revision) {
     process.stderr.write(
-      "Warning: this local build has no clean source revision. Use the CI artifact for a reproducible release.\n"
+      "Warning: this local build has no clean source revision. Build from a clean checkout for a reproducible release.\n"
     );
   }
 }

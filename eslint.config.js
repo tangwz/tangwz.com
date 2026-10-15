@@ -18,5 +18,15 @@ export default [
     },
   },
   { rules: { "no-console": "error" } },
-  { ignores: ["dist/**", ".astro/**", "public/pagefind/**"] },
+  {
+    ignores: [
+      "dist/**",
+      ".astro/**",
+      ".cache/**",
+      ".pnpm-store/**",
+      "public/pagefind/**",
+      "playwright-report/**",
+      "test-results/**",
+    ],
+  },
 ];
