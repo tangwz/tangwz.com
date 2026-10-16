@@ -10,6 +10,7 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { isDeepStrictEqual, parseArgs } from "node:util";
 
@@ -65,6 +66,21 @@ function git(source, args) {
   return execFileSync("git", ["-C", source, ...args], {
     maxBuffer: 32 * 1024 * 1024,
   });
+}
+
+export async function fetchTheme(
+  source,
+  ref,
+  { run = git, wait = delay } = {}
+) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return run(source, ["fetch", "--depth=1", "origin", ref]);
+    } catch (error) {
+      if (attempt === 2) throw error;
+      await wait(500 * (attempt + 1));
+    }
+  }
 }
 
 function themeTree(source, revision) {
@@ -307,7 +323,7 @@ async function main() {
   try {
     git(source, ["init", "-q"]);
     git(source, ["remote", "add", "origin", repository]);
-    git(source, ["fetch", "--depth=1", "origin", ref]);
+    await fetchTheme(source, ref);
     const revision = git(source, ["rev-parse", "FETCH_HEAD"]).toString().trim();
     process.stdout.write(
       `Tang: ${lock.revision.slice(0, 7)} -> ${revision.slice(0, 7)}\n`
@@ -317,7 +333,7 @@ async function main() {
       (!resolvedFiles.length && revision === lock.revision && ref === lock.ref)
     )
       return;
-    git(source, ["fetch", "--depth=1", "origin", lock.revision]);
+    await fetchTheme(source, lock.revision);
     const changes = await applyThemeUpdate({
       root,
       source,
@@ -331,9 +347,7 @@ async function main() {
       JSON.stringify({ ...lock, ref, revision }, null, 2) + "\n"
     );
     process.stdout.write(`Updated ${changes.length} theme files.\n`);
-    process.stdout.write(
-      "Next: pnpm install --frozen-lockfile && pnpm test && npm run build\n"
-    );
+    process.stdout.write("Next: npm run theme:verify\n");
   } finally {
     await rm(source, { recursive: true, force: true });
   }

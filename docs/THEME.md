@@ -29,6 +29,8 @@ npm run theme:verify
 
 独立执行同步时使用 `npm run theme:update`，随后运行 `npm run theme:verify`。同步发生合并冲突时，脚本不写入候选文件；处理方式见下文。
 
+远端拉取遇到临时错误时最多尝试三次。拉取始终在临时目录中完成，全部失败时不会写入博客文件或推进主题基线。
+
 需要指定分支、标签或完整 commit SHA 时：
 
 ```sh

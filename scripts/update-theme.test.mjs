@@ -17,8 +17,62 @@ import test from "node:test";
 import {
   applyThemeUpdate,
   destinationPath,
+  fetchTheme,
   isThemeFile,
 } from "./update-theme.mjs";
+
+test("successful theme fetches do not retry or wait", async () => {
+  const calls = [];
+  const output = Buffer.from("fetched");
+  const result = await fetchTheme("/source", "main", {
+    run(source, args) {
+      calls.push([source, args]);
+      return output;
+    },
+    wait() {
+      assert.fail("A successful fetch must not wait");
+    },
+  });
+  assert.equal(result, output);
+  assert.deepEqual(calls, [
+    ["/source", ["fetch", "--depth=1", "origin", "main"]],
+  ]);
+});
+
+test("theme fetches recover from transient failures with bounded backoff", async () => {
+  let attempts = 0;
+  const waits = [];
+  await fetchTheme("/source", "a".repeat(40), {
+    run() {
+      if (++attempts < 3) throw new Error("Temporary TLS failure");
+    },
+    wait(milliseconds) {
+      waits.push(milliseconds);
+    },
+  });
+  assert.equal(attempts, 3);
+  assert.deepEqual(waits, [500, 1000]);
+});
+
+test("theme fetches stop after three failures and preserve the original error", async () => {
+  let attempts = 0;
+  const error = new Error("Connection unavailable");
+  const waits = [];
+  await assert.rejects(
+    fetchTheme("/source", "main", {
+      run() {
+        attempts++;
+        throw error;
+      },
+      wait(milliseconds) {
+        waits.push(milliseconds);
+      },
+    }),
+    actual => actual === error
+  );
+  assert.equal(attempts, 3);
+  assert.deepEqual(waits, [500, 1000]);
+});
 
 async function fixture(t) {
   const temporary = await mkdtemp(join(tmpdir(), "theme-test-"));
