@@ -21,7 +21,8 @@
     "format": "prettier --write .",
     "lint": "eslint .",
     "theme:update": "node scripts/update-theme.mjs",
-    "theme:upgrade": "npm run theme:update && pnpm install --frozen-lockfile && npm test && npm run build && pnpm exec playwright install chromium && npm run check:layout",
+    "theme:upgrade": "npm run theme:update && npm run theme:verify",
+    "theme:verify": "node scripts/verify-theme.mjs",
     "theme:check": "node scripts/update-theme.mjs --check",
     "migrate:old-blog": "node scripts/migrate-old-blog/migrate.mjs --source .cache/tangwz.github.io --out src/content/posts --report migration-report.json",
     "test:migrate-old-blog": "node --test scripts/migrate-old-blog/*.test.mjs"

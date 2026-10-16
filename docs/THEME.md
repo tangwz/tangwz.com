@@ -2,6 +2,12 @@
 
 博客使用 [tangwz/tang](https://github.com/tangwz/tang) 的源码，固定版本记录在 `theme.lock.json`。构建直接使用仓库内的文件，不下载主题；主题更新经过显式同步和验证后才生效。
 
+## 日常同步
+
+主题更新后，博客的 **Update Tang theme** 工作流每小时准备一个升级 PR。审核并合并该 PR 即可使用新主题；需要立即同步时，在 Actions 手动执行该工作流。首次使用前需把本同步机制合入博客默认分支，并允许 Actions 创建 PR。
+
+本地更新只需在干净工作区执行 `npm run theme:upgrade`。正常升级自动保留个人内容和已有博客适配，不需要重新迁移页面或重复修改主题源码。通用视觉和行为改动应优先提交到 `tang`，再通过同步进入博客，避免不断积累两套实现。
+
 ## 本地更新
 
 需要 Git、Node.js 24 和 pnpm 11.3.0。先提交或 stash 当前改动，保持工作区干净：
@@ -13,19 +19,21 @@ git diff --stat
 git diff
 ```
 
-`theme:check` 只报告当前版本和上游版本。`theme:upgrade` 同步源码、按锁文件安装依赖、执行测试并构建，随后安装匹配版本的 Chromium 并验证生产页面布局。浏览器版本已缓存时不会重复下载。独立执行同步时使用 `npm run theme:update`；执行后还需安装依赖并验证。同步不提交代码，也不发布网站。
+`theme:check` 只报告当前版本和上游版本。`theme:upgrade` 先同步源码，再执行统一的 `theme:verify`。该入口按锁文件安装依赖、强制刷新内容缓存、执行测试、lint 和格式检查、完成发布构建，随后安装匹配版本的 Chromium 并验证生产页面。浏览器版本已缓存时不会重复下载。本地升级、普通 CI 和自动更新使用同一套验证，CI 还会安装浏览器所需系统依赖。同步不提交代码，也不发布网站。
+
+验证失败时保留已生成的升级候选。修复原因后执行下面的命令即可重新验证，无需重新拉取主题或提前提交失败的候选：
+
+```sh
+npm run theme:verify
+```
+
+独立执行同步时使用 `npm run theme:update`，随后运行 `npm run theme:verify`。同步发生合并冲突时，脚本不写入候选文件；处理方式见下文。
 
 需要指定分支、标签或完整 commit SHA 时：
 
 ```sh
 npm run theme:update -- --ref main
-pnpm install --frozen-lockfile
-pnpm test
-pnpm lint
-pnpm format:check
-npm run build:release
-pnpm exec playwright install chromium
-npm run check:layout
+npm run theme:verify
 ```
 
 `--ref` 会保存到锁文件；如果临时固定了旧 commit，恢复跟随主分支时需再次指定 `--ref main`。
@@ -51,7 +59,7 @@ npm run check:layout
 | 博客 | `src/content/`、`src/data/`、`astro-paper.config.ts`                     | 不从主题写入 |
 | 博客 | favicon、个人 OG 图片、README、AGENTS、GitHub workflows、同步脚本        | 不从主题写入 |
 
-`package.json` 按字段合并，保留博客名称和同步命令，同时同步主题依赖。新增主题文件如果与博客文件重名且内容不同，会报告冲突。上游删除的文件只有在本地未修改时才删除。图片等二进制文件如果双方都修改，会报告冲突。
+`package.json` 按字段合并，保留博客名称和同步命令，同时同步主题依赖；依赖锁文件也参与三方合并，随后以 frozen install 验证一致性。普通依赖更新也可能在锁文件中产生文本冲突，需要处理这份锁文件；不会默默重新解析或批量升级无关依赖。新增主题文件如果与博客文件重名且内容不同，会报告冲突。上游删除的文件只有在本地未修改时才删除。图片等二进制文件如果双方都修改，会报告冲突。
 
 个人配置集中在 `astro-paper.config.ts`、`src/data/` 和内容目录。通用视觉和行为建议在 `tang` 修改，再同步到博客，减少长期分叉。同步脚本不引入主题的示例文章、视频、书籍、课程和公开来信，也不引入 `/design/` 演示路由。
 
@@ -90,18 +98,12 @@ npm run theme:update -- --ref "$theme_revision" --resolved-file package.json
 恢复操作必须显式提供 `--ref` 完整 SHA，不能使用移动的分支名或与 `--check` 同用；换用新目标 SHA 时需重新审阅冲突。整批同步成功后才推进锁文件，再执行下面的完整验证。提交同步结果后使用 `npm run theme:update -- --ref main` 恢复跟随主分支。不要单独修改锁文件来绕过失败，否则后续更新会把未合入的变更当作已经同步。
 
 ```sh
-pnpm install --frozen-lockfile
-pnpm test
-pnpm lint
-pnpm format:check
-npm run build:release
-pnpm exec playwright install chromium
-npm run check:layout
+npm run theme:verify
 ```
 
-本地修改 Markdown 渲染插件后，若产物仍显示旧内容，先执行 `npm run sync -- --force` 清理内容缓存，再重新构建和验证。
+统一验证会自动刷新 Markdown 内容缓存，主题渲染插件的更新会进入新的构建产物。
 
-测试覆盖三方合并、个人内容保护、新增文件重名、删除冲突、语言路由映射、重复同步、未引用资产的本地删除，以及绑定目标版本的显式冲突恢复。构建检查覆盖 canonical、站内链接、图片、RSS、sitemap 和 Pagefind；博客专项检查复用文章发布规则，根据已发布文章的 Markdown 或 MDX 正文核对公式及其重复次数，排除草稿、模板和未到发布时间的文章。MDX 导出变量、表达式、属性和注释中的公式文本不作为正文公式。所有 HTML（包括 noindex 页面）都会扫描示例标记和中英文示例说明；真实书籍和课程不会显示主题示例说明。
+测试覆盖三方合并、个人内容保护、新增文件重名、删除冲突、语言路由映射、重复同步、未引用资产的本地删除，以及绑定目标版本的显式冲突恢复。连续版本测试核对逐次升级与直接跨版本升级的结果一致，并验证后续升级继续保留博客新增适配和独立依赖。统一验证入口还测试执行顺序、CI 浏览器安装和失败时停止。构建检查覆盖 canonical、站内链接、图片、RSS、sitemap 和 Pagefind；博客专项检查复用文章发布规则，根据已发布文章的 Markdown 或 MDX 正文核对公式及其重复次数，排除草稿、模板和未到发布时间的文章。MDX 导出变量、表达式、属性和注释中的公式文本不作为正文公式。所有 HTML（包括 noindex 页面）都会扫描示例标记和中英文示例说明；真实书籍和课程不会显示主题示例说明。
 
 `check:layout` 针对真实生产产物，核对中英文作品库与两个 RSS 中全部文章的链接集合，再检查 1218px 桌面视口下的三列网格、完整行分页和最后一页，以及 768px、390px 视口下的两列、单列和水平溢出。文章数量不写死，空列表或遗漏文章也会失败。浏览器检查还验证英文 About 回退的中文 canonical、noindex、hreflang 和 sitemap。该检查在普通 CI 和主题更新流程中都会执行。
 

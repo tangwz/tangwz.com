@@ -5,6 +5,7 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  readdir,
   rm,
   stat,
   symlink,
@@ -44,7 +45,25 @@ async function fixture(t) {
   };
   const update = (previous, revision, options = {}) =>
     applyThemeUpdate({ root, source, previous, revision, ...options });
-  return { source, root, put, commit, update };
+  const snapshot = async (directory = root) => {
+    const files = {};
+    for (const path of (await readdir(directory, { recursive: true })).sort()) {
+      const target = join(directory, path);
+      const metadata = await stat(target);
+      if (metadata.isFile()) {
+        const content = await readFile(target);
+        files[path] = {
+          content:
+            path === "package.json"
+              ? JSON.parse(content.toString())
+              : content.toString("base64"),
+          mode: metadata.mode & 0o777,
+        };
+      }
+    }
+    return files;
+  };
+  return { source, root, put, commit, update, snapshot };
 }
 
 test("theme scope excludes personal content, configuration and demo routes", () => {
@@ -60,6 +79,8 @@ test("theme scope excludes personal content, configuration and demo routes", () 
     "public/tangwz-og.png",
     ".github/workflows/ci.yml",
     "scripts/update-theme.mjs",
+    "scripts/verify-theme.mjs",
+    "scripts/verify-theme.test.mjs",
     "scripts/check-site.mjs",
     "scripts/site-content.mjs",
     "playwright.config.ts",
@@ -155,6 +176,175 @@ test("package updates retain local scripts and identity while updating dependenc
   assert.equal(pkg.name, "blog");
   assert.equal(pkg.scripts["theme:update"], "node scripts/update-theme.mjs");
   assert.equal(pkg.dependencies.astro, "7.0.4");
+});
+
+test("successive upgrades match a direct upgrade across routes, files, dependencies and modes", async t => {
+  const { source, root, put, commit, update, snapshot } = await fixture(t);
+  const direct = join(dirname(root), "direct-blog");
+  await mkdir(direct);
+  const header = "src/components/Header.astro";
+  const command = "src/scripts/command.sh";
+  const style = "src/styles/new.css";
+  const removed = "src/styles/old.css";
+  const transient = "src/styles/transient.css";
+  const rootRoute = "src/pages/journal/index.astro";
+  const localizedRoute = "src/pages/zh/journal/index.astro";
+  const mappedRoute = "src/pages/en/journal/index.astro";
+  const content = version =>
+    `local = default;\n\n\n\n\n\nremote = ${version};\n`;
+  const route = (locale, version) =>
+    `getWritingPaths("${locale}", options);\nconst version = "${version}";\n`;
+  const pkg = version => ({
+    name: "theme",
+    scripts: { build: "astro build" },
+    dependencies: {
+      astro: `7.0.${version}`,
+      ...(version > 3 ? { "theme-addon": `${version - 3}.0.0` } : {}),
+    },
+  });
+  await put(source, header, content("a"));
+  await put(source, command, "#!/bin/sh\nexit 0\n", 0o644);
+  await put(source, removed, "old style\n");
+  await put(source, "package.json", JSON.stringify(pkg(3)));
+  const a = commit();
+  for (const directory of [root, direct]) {
+    await put(
+      directory,
+      header,
+      content("a").replace("local = default", "local = personal")
+    );
+    await put(directory, command, "#!/bin/sh\nexit 0\n", 0o644);
+    await put(directory, removed, "old style\n");
+    await put(
+      directory,
+      "package.json",
+      JSON.stringify({
+        ...pkg(3),
+        name: "blog",
+        scripts: { ...pkg(3).scripts, "theme:update": "node update-theme.mjs" },
+        dependencies: { ...pkg(3).dependencies, "blog-only": "1.0.0" },
+      })
+    );
+  }
+
+  await put(source, header, content("b"));
+  await chmod(join(source, command), 0o755);
+  await rm(join(source, removed));
+  await put(source, style, "style from b\n");
+  await put(source, transient, "only in b\n");
+  await put(source, rootRoute, route("en", "b"));
+  await put(source, localizedRoute, route("zh", "b"));
+  await put(source, "package.json", JSON.stringify(pkg(4)));
+  const b = commit();
+  await update(a, b);
+  const afterB = await snapshot();
+  assert.deepEqual(await update(b, b), []);
+  assert.deepEqual(await snapshot(), afterB);
+
+  await put(source, header, content("c"));
+  await put(source, command, "#!/bin/sh\nexit 1\n", 0o755);
+  await put(source, style, "style from c\n");
+  await rm(join(source, transient));
+  await put(source, rootRoute, route("en", "c"));
+  await put(source, localizedRoute, route("zh", "c"));
+  await put(source, "package.json", JSON.stringify(pkg(5)));
+  const c = commit();
+  await update(b, c);
+  await update(a, c, { root: direct });
+  assert.deepEqual(await snapshot(), await snapshot(direct));
+  assert.equal(
+    await readFile(join(root, header), "utf8"),
+    content("c").replace("local = default", "local = personal")
+  );
+  assert.equal(await readFile(join(root, style), "utf8"), "style from c\n");
+  assert.equal(await readFile(join(root, rootRoute), "utf8"), route("zh", "c"));
+  assert.equal(
+    await readFile(join(root, mappedRoute), "utf8"),
+    route("en", "c")
+  );
+  for (const path of [removed, transient, localizedRoute])
+    await assert.rejects(readFile(join(root, path)), { code: "ENOENT" });
+  assert.equal((await stat(join(root, command))).mode & 0o777, 0o755);
+  assert.deepEqual(
+    JSON.parse(await readFile(join(root, "package.json"), "utf8")),
+    {
+      ...pkg(5),
+      name: "blog",
+      scripts: { ...pkg(5).scripts, "theme:update": "node update-theme.mjs" },
+      dependencies: { ...pkg(5).dependencies, "blog-only": "1.0.0" },
+    }
+  );
+  assert.deepEqual(await update(c, c), []);
+});
+
+test("later upgrades retain blog adaptations added after an earlier upgrade", async t => {
+  const { source, root, put, commit, update } = await fixture(t);
+  const path = "src/scripts/command.sh";
+  const content = version =>
+    `initial = default;\n\n\n\n\n\nlater = default;\n\n\n\n\n\nremote = ${version};\n`;
+  const pkg = version => ({
+    name: "theme",
+    dependencies: { astro: `7.0.${version}` },
+    scripts: { build: "astro build" },
+  });
+  await put(source, path, content("a"), 0o644);
+  await put(source, "package.json", JSON.stringify(pkg(3)));
+  const a = commit();
+  await put(
+    root,
+    path,
+    content("a").replace("initial = default", "initial = personal"),
+    0o644
+  );
+  await put(
+    root,
+    "package.json",
+    JSON.stringify({
+      ...pkg(3),
+      name: "blog",
+      dependencies: { ...pkg(3).dependencies, "blog-only": "1.0.0" },
+    })
+  );
+  await put(source, path, content("b"));
+  await put(source, "package.json", JSON.stringify(pkg(4)));
+  const b = commit();
+  await update(a, b);
+
+  await put(
+    root,
+    path,
+    (await readFile(join(root, path), "utf8")).replace(
+      "later = default",
+      "later = personal"
+    ),
+    0o755
+  );
+  const local = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
+  local.dependencies["blog-only"] = "2.0.0";
+  local.scripts["theme:update"] = "node update-theme.mjs";
+  await put(root, "package.json", JSON.stringify(local));
+
+  await put(source, path, content("c"));
+  await put(source, "package.json", JSON.stringify(pkg(5)));
+  const c = commit();
+  await update(b, c);
+  assert.equal(
+    await readFile(join(root, path), "utf8"),
+    content("c")
+      .replace("initial = default", "initial = personal")
+      .replace("later = default", "later = personal")
+  );
+  assert.equal((await stat(join(root, path))).mode & 0o777, 0o755);
+  assert.deepEqual(
+    JSON.parse(await readFile(join(root, "package.json"), "utf8")),
+    {
+      ...pkg(5),
+      name: "blog",
+      dependencies: { ...pkg(5).dependencies, "blog-only": "2.0.0" },
+      scripts: { ...pkg(5).scripts, "theme:update": "node update-theme.mjs" },
+    }
+  );
+  assert.deepEqual(await update(c, c), []);
 });
 
 test("reviewed package resolutions unblock updates while other files still merge", async t => {

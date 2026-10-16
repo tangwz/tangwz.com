@@ -58,19 +58,9 @@ jobs:
             echo 'changed=true' >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Install locked dependencies
-        if: steps.sync.outputs.changed == 'true'
-        run: pnpm install --frozen-lockfile
-
       - name: Validate the candidate before opening a PR
         if: steps.sync.outputs.changed == 'true'
-        run: |
-          pnpm test
-          pnpm lint
-          pnpm format:check
-          npm run build:release
-          pnpm exec playwright install --with-deps chromium
-          pnpm run check:layout
+        run: npm run theme:verify
 
       - name: Commit and open or update the PR
         if: steps.sync.outputs.changed == 'true'

@@ -30,6 +30,8 @@ npm run theme:upgrade
 
 GitHub Actions 每小时检查主题更新，验证通过后创建或更新一个 PR；也可手动触发 **Update Tang theme**。工作流需合入默认分支，并允许 Actions 创建 PR。个人文章、About 正文、站点配置及作品数据不从主题覆盖。
 
+本地升级与两个 CI 工作流共用 `theme:verify`，自动刷新内容缓存并完成依赖、测试、代码规范、发布构建和浏览器验证。验证失败后修复原因，直接执行 `npm run theme:verify` 重试即可，不必重新同步源码。
+
 完整操作、权限设置、冲突处理及文件归属见 [主题维护文档](docs/THEME.md)。
 
 ## 配置与内容

@@ -36,23 +36,5 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: "pnpm"
 
-      - name: "📦 Install dependencies"
-        run: pnpm install --frozen-lockfile
-
-      - name: Verify theme and synchronization behavior
-        run: pnpm test
-
-      - name: "🔎 Lint code"
-        run: pnpm run lint
-
-      - name: "📝 Checking code format"
-        run: pnpm run format:check
-
-      - name: "🚀 Build the project"
-        run: pnpm run build
-
-      - name: Install the layout test browser
-        run: pnpm exec playwright install --with-deps chromium
-
-      - name: Verify the production layout
-        run: pnpm run check:layout
+      - name: Verify theme, content and production layout
+        run: npm run theme:verify
