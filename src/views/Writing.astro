@@ -11,6 +11,7 @@ import type { Page } from "astro";
 import type { CollectionEntry } from "astro:content";
 type Props = { page: Page<CollectionEntry<"posts">> };
 const { page } = Astro.props;
+const topics = [...new Set(page.data.flatMap(post => post.data.tags))];
 ---
 
 <Layout
@@ -19,7 +20,11 @@ const { page } = Astro.props;
     "Essays and field notes on building, creating, and living with intention."
   )}
 >
-  <Header /><main id="main-content" class="wide-container">
+  <Header /><main
+    id="main-content"
+    class="wide-container"
+    data-writing-collection
+  >
     <div class="page-header">
       <span class="eyebrow">{tr("NOTES FROM THE JOURNEY")}</span><h1>
         {tr("A few things")}<br /><em>{tr("on my mind.")}</em>
@@ -35,18 +40,15 @@ const { page } = Astro.props;
       role="group"
       aria-label={tr("Filter essays by topic")}
     >
+      <button class="filter-button" data-writing-all aria-pressed="true">
+        {tr("All writing")}
+      </button>
       {
-        ["All writing", "Building", "Creating", "Living"].map(
-          (label, index) => (
-            <button
-              class="filter-button"
-              data-topic={index === 0 ? "all" : label.toLowerCase()}
-              aria-pressed={index === 0 ? "true" : "false"}
-            >
-              {tr(label)}
-            </button>
-          )
-        )
+        topics.map(topic => (
+          <button class="filter-button" data-topic={topic} aria-pressed="false">
+            {topic}
+          </button>
+        ))
       }
     </div><ul class="article-list">
       {page.data.map(post => <Card {...post} />)}
@@ -67,23 +69,30 @@ const { page } = Astro.props;
 </Layout>
 <script>
   function setupFilters() {
-    const buttons =
-      document.querySelectorAll<HTMLButtonElement>(".filter-button");
-    const items = document.querySelectorAll<HTMLElement>(".article-list > li");
-    const empty = document.querySelector<HTMLElement>("#writing-empty");
+    const root = document.querySelector<HTMLElement>(
+      "[data-writing-collection]"
+    );
+    if (!root || root.dataset.bound) return;
+    root.dataset.bound = "true";
+    const buttons = root.querySelectorAll<HTMLButtonElement>(".filter-button");
+    const items = [
+      ...root.querySelectorAll<HTMLElement>(".article-list > li"),
+    ].map(element => ({
+      element,
+      tags: JSON.parse(element.dataset.tags ?? "[]") as string[],
+    }));
+    const empty = root.querySelector<HTMLElement>("#writing-empty");
     buttons.forEach(button => {
-      if (button.dataset.bound) return;
-      button.dataset.bound = "true";
       button.addEventListener("click", () => {
         buttons.forEach(item =>
           item.setAttribute("aria-pressed", String(item === button))
         );
         let visible = 0;
-        items.forEach(item => {
+        items.forEach(({ element, tags }) => {
           const matches =
-            button.dataset.topic === "all" ||
-            item.dataset.tags?.split(",").includes(button.dataset.topic ?? "");
-          item.hidden = !matches;
+            button.hasAttribute("data-writing-all") ||
+            tags.includes(button.dataset.topic ?? "");
+          element.hidden = !matches;
           if (matches) visible++;
         });
         if (empty) empty.hidden = visible > 0;

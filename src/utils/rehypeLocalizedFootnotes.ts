@@ -12,7 +12,7 @@ type ContentFile = {
 
 export function rehypeLocalizedFootnotes() {
   return (tree: ContentNode, file: ContentFile) => {
-    if (file.data.astro?.frontmatter?.lang !== "zh") return;
+    if ((file.data.astro?.frontmatter?.lang ?? "zh") !== "zh") return;
 
     function localize(node: ContentNode) {
       if (node.properties?.id === "footnote-label") {

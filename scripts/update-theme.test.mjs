@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import {
+  chmod,
   mkdir,
   mkdtemp,
   readFile,
   rm,
+  stat,
   symlink,
   writeFile,
 } from "node:fs/promises";
@@ -29,10 +31,11 @@ async function fixture(t) {
   git(["init", "-q"]);
   git(["config", "user.name", "Theme Test"]);
   git(["config", "user.email", "theme-test@example.com"]);
-  const put = async (directory, path, content) => {
+  const put = async (directory, path, content, mode) => {
     const target = join(directory, path);
     await mkdir(dirname(target), { recursive: true });
     await writeFile(target, content);
+    if (mode !== undefined) await chmod(target, mode);
   };
   const commit = () => {
     git(["add", "."]);
@@ -395,6 +398,126 @@ test("binary assets update cleanly and reject divergent local edits", async t =>
   await put(root, path, base);
   await update(previous, revision);
   assert.deepEqual(await readFile(join(root, path)), incoming);
+});
+
+test("mode-only updates synchronize both executable-bit directions", async t => {
+  for (const [beforeMode, afterMode] of [
+    [0o644, 0o755],
+    [0o755, 0o644],
+  ]) {
+    await t.test(
+      `${beforeMode.toString(8)} to ${afterMode.toString(8)}`,
+      async t => {
+        const { source, root, put, commit, update } = await fixture(t);
+        const path = "src/scripts/command.sh";
+        const content = "#!/bin/sh\nexit 0\n";
+        await put(source, path, content, beforeMode);
+        const previous = commit();
+        await put(root, path, content, beforeMode);
+        await chmod(join(source, path), afterMode);
+        const revision = commit();
+        assert.deepEqual(await update(previous, revision), [path]);
+        assert.equal((await stat(join(root, path))).mode & 0o777, afterMode);
+        assert.equal(await readFile(join(root, path), "utf8"), content);
+        assert.deepEqual(await update(revision, revision), []);
+      }
+    );
+  }
+});
+
+test("content updates preserve independent local executable-bit changes", async t => {
+  for (const [beforeMode, localMode] of [
+    [0o644, 0o755],
+    [0o755, 0o644],
+  ]) {
+    await t.test(`preserves ${localMode.toString(8)}`, async t => {
+      const { source, root, put, commit, update } = await fixture(t);
+      const path = "src/scripts/command.sh";
+      await put(source, path, "old\n", beforeMode);
+      const previous = commit();
+      await put(root, path, "old\n", localMode);
+      await put(source, path, "incoming\n");
+      const revision = commit();
+      assert.deepEqual(await update(previous, revision), [path]);
+      assert.equal(await readFile(join(root, path), "utf8"), "incoming\n");
+      assert.equal((await stat(join(root, path))).mode & 0o777, localMode);
+      assert.deepEqual(await update(revision, revision), []);
+    });
+  }
+});
+
+test("upstream content and mode changes merge with independent local content", async t => {
+  const { source, root, put, commit, update } = await fixture(t);
+  const path = "src/scripts/command.sh";
+  const content = "local = old;\n\n\n\n\nremote = old;\n";
+  await put(source, path, content, 0o644);
+  const previous = commit();
+  await put(
+    root,
+    path,
+    content.replace("local = old", "local = personal"),
+    0o644
+  );
+  await put(
+    source,
+    path,
+    content.replace("remote = old", "remote = incoming"),
+    0o755
+  );
+  assert.deepEqual(await update(previous, commit()), [path]);
+  const merged = await readFile(join(root, path), "utf8");
+  assert.match(merged, /local = personal/);
+  assert.match(merged, /remote = incoming/);
+  assert.equal((await stat(join(root, path))).mode & 0o777, 0o755);
+});
+
+test("mode conflicts protect deletions until their local resolution is explicit", async t => {
+  const { source, root, put, commit, update } = await fixture(t);
+  const removed = "src/scripts/old.sh";
+  const added = "src/scripts/new.sh";
+  await put(source, removed, "old\n", 0o644);
+  const previous = commit();
+  await put(root, removed, "old\n", 0o755);
+  await rm(join(source, removed));
+  await put(source, added, "new\n", 0o755);
+  const revision = commit();
+  await assert.rejects(
+    update(previous, revision),
+    /old.sh \(mode\)[\s\S]*No files changed/
+  );
+  assert.equal((await stat(join(root, removed))).mode & 0o777, 0o755);
+  await assert.rejects(readFile(join(root, added)), { code: "ENOENT" });
+  assert.deepEqual(
+    await update(previous, revision, {
+      resolvedFiles: [removed],
+      resolvedRevision: revision,
+    }),
+    [added]
+  );
+  assert.equal((await stat(join(root, removed))).mode & 0o777, 0o755);
+  assert.equal((await stat(join(root, added))).mode & 0o777, 0o755);
+});
+
+test("reviewed content resolutions retain the local file mode", async t => {
+  const { source, root, put, commit, update } = await fixture(t);
+  const path = "src/scripts/command.sh";
+  await put(source, path, "old\n", 0o644);
+  const previous = commit();
+  await put(root, path, "personal and incoming\n", 0o644);
+  await put(source, path, "incoming\n", 0o755);
+  const revision = commit();
+  assert.deepEqual(
+    await update(previous, revision, {
+      resolvedFiles: [path],
+      resolvedRevision: revision,
+    }),
+    []
+  );
+  assert.equal(
+    await readFile(join(root, path), "utf8"),
+    "personal and incoming\n"
+  );
+  assert.equal((await stat(join(root, path))).mode & 0o777, 0o644);
 });
 
 test("locally removed unused assets stay removed across unrelated updates", async t => {

@@ -1,6 +1,22 @@
 import { expect, test } from "@playwright/test";
 import config from "../../astro-paper.config";
 
+test("legacy Chinese articles use localized footnotes in both locale routes", async ({
+  page,
+}) => {
+  for (const prefix of ["", "/en"]) {
+    await page.goto(`${prefix}/posts/202009-consensus/`);
+    await expect(page.locator("#footnote-label")).toHaveText("\u811a\u6ce8");
+    const references = page.locator("[data-footnote-backref]");
+    expect(await references.count()).toBeGreaterThan(0);
+    for (const reference of await references.all())
+      await expect(reference).toHaveAttribute(
+        "aria-label",
+        "\u8fd4\u56de\u811a\u6ce8\u5f15\u7528"
+      );
+  }
+});
+
 test("the English About page is a non-indexable fallback to Chinese", async ({
   page,
   request,

@@ -166,17 +166,22 @@ async function mergeFile(base, local, incoming, path, temporary) {
 
 async function readLocal(root, path) {
   let target = root;
+  let metadata;
   for (const part of path.split("/")) {
     target = join(target, part);
     try {
-      if ((await lstat(target)).isSymbolicLink())
+      metadata = await lstat(target);
+      if (metadata.isSymbolicLink())
         throw new Error(`Cannot update a symbolic link: ${path}`);
     } catch (error) {
       if (error.code === "ENOENT") return undefined;
       throw error;
     }
   }
-  return readFile(target);
+  return {
+    content: await readFile(target),
+    mode: metadata.mode & 0o100 ? "100755" : "100644",
+  };
 }
 
 /** Plan every merge before writing, so conflicts cannot leave a partial update. */
@@ -229,15 +234,18 @@ export async function applyThemeUpdate({
           newEntry.path,
           git(source, ["cat-file", "blob", newEntry.blob])
         );
-      const local = await readLocal(root, path);
+      const localFile = await readLocal(root, path);
+      const local = localFile?.content;
       try {
         const content = await mergeFile(base, local, incoming, path, temporary);
-        if (!same(content, local))
-          changes.push({
-            path,
-            content,
-            mode: newEntry?.mode ?? oldEntry.mode,
-          });
+        const mode = mergeValue(
+          oldEntry?.mode,
+          localFile?.mode,
+          newEntry?.mode,
+          `${path} (mode)`
+        );
+        if (!same(content, local) || mode !== localFile?.mode)
+          changes.push({ path, content, mode });
       } catch (error) {
         if (error instanceof ThemeConflict && resolutions.has(path))
           resolutions.delete(path);

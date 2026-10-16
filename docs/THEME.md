@@ -99,6 +99,8 @@ pnpm exec playwright install chromium
 npm run check:layout
 ```
 
+本地修改 Markdown 渲染插件后，若产物仍显示旧内容，先执行 `npm run sync -- --force` 清理内容缓存，再重新构建和验证。
+
 测试覆盖三方合并、个人内容保护、新增文件重名、删除冲突、语言路由映射、重复同步、未引用资产的本地删除，以及绑定目标版本的显式冲突恢复。构建检查覆盖 canonical、站内链接、图片、RSS、sitemap 和 Pagefind；博客专项检查复用文章发布规则，根据已发布文章的 Markdown 或 MDX 正文核对公式及其重复次数，排除草稿、模板和未到发布时间的文章。MDX 导出变量、表达式、属性和注释中的公式文本不作为正文公式。所有 HTML（包括 noindex 页面）都会扫描示例标记和中英文示例说明；真实书籍和课程不会显示主题示例说明。
 
 `check:layout` 针对真实生产产物，核对中英文作品库与两个 RSS 中全部文章的链接集合，再检查 1218px 桌面视口下的三列网格、完整行分页和最后一页，以及 768px、390px 视口下的两列、单列和水平溢出。文章数量不写死，空列表或遗漏文章也会失败。浏览器检查还验证英文 About 回退的中文 canonical、noindex、hreflang 和 sitemap。该检查在普通 CI 和主题更新流程中都会执行。
