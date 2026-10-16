@@ -1,6 +1,8 @@
-import { parseFrontmatter, unified } from "@astrojs/markdown-remark";
+import { parseFrontmatter } from "@astrojs/markdown-remark";
 import { fromHtml } from "hast-util-from-html";
+import { createProcessor } from "@mdx-js/mdx";
 import remarkMath from "remark-math";
+import { isPublished, isPublicWork } from "../src/utils/publication.ts";
 
 const normalize = value => value.replace(/\s+/g, " ").trim();
 const text = node =>
@@ -10,20 +12,29 @@ const visit = (node, inspect) => {
   node.children?.forEach(child => visit(child, inspect));
 };
 
-export async function sourceFormulas(markdown) {
+export function isPublishedArticle(frontmatter, options = {}) {
+  return (
+    isPublicWork(frontmatter) &&
+    isPublished(
+      { ...frontmatter, pubDatetime: new Date(frontmatter.pubDatetime) },
+      options
+    )
+  );
+}
+
+export async function sourceFormulas(markdown, path = "article.md") {
   const formulas = [];
-  const collect = () => tree =>
-    visit(tree, node => {
-      if (
-        ["math", "inlineMath"].includes(node.type) ||
-        (node.type === "code" && node.lang === "math")
-      )
-        formulas.push(normalize(node.value));
-    });
-  const renderer = await unified({
-    remarkPlugins: [remarkMath, collect],
-  }).createRenderer({ syntaxHighlight: false });
-  await renderer.render(parseFrontmatter(markdown).content);
+  const processor = createProcessor({
+    format: path.endsWith(".mdx") ? "mdx" : "md",
+    remarkPlugins: [remarkMath],
+  });
+  visit(processor.parse(parseFrontmatter(markdown).content), node => {
+    if (
+      ["math", "inlineMath"].includes(node.type) ||
+      (node.type === "code" && node.lang === "math")
+    )
+      formulas.push(normalize(node.value));
+  });
   return formulas;
 }
 

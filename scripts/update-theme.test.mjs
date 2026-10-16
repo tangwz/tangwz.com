@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import {
   mkdir,
   mkdtemp,
@@ -39,8 +39,8 @@ async function fixture(t) {
     git(["commit", "-qm", "Update theme"]);
     return git(["rev-parse", "HEAD"]);
   };
-  const update = (previous, revision) =>
-    applyThemeUpdate({ root, source, previous, revision });
+  const update = (previous, revision, options = {}) =>
+    applyThemeUpdate({ root, source, previous, revision, ...options });
   return { source, root, put, commit, update };
 }
 
@@ -152,6 +152,164 @@ test("package updates retain local scripts and identity while updating dependenc
   assert.equal(pkg.name, "blog");
   assert.equal(pkg.scripts["theme:update"], "node scripts/update-theme.mjs");
   assert.equal(pkg.dependencies.astro, "7.0.4");
+});
+
+test("reviewed package resolutions unblock updates while other files still merge", async t => {
+  const { source, root, put, commit, update } = await fixture(t);
+  const pkg = build => JSON.stringify({ scripts: { build } });
+  const style = "src/styles/global.css";
+  await put(source, "package.json", pkg("astro build"));
+  await put(source, style, "old");
+  const previous = commit();
+  await put(root, "package.json", pkg("astro build && check-site"));
+  await put(root, style, "old");
+  await put(source, "package.json", pkg("astro check && astro build"));
+  await put(source, style, "new");
+  const revision = commit();
+  await assert.rejects(
+    update(previous, revision),
+    /package.json.scripts.build/
+  );
+
+  const resolved = pkg("astro check && astro build && check-site");
+  await put(root, "package.json", resolved);
+  assert.deepEqual(
+    await update(previous, revision, {
+      resolvedFiles: ["package.json"],
+      resolvedRevision: revision,
+    }),
+    [style]
+  );
+  assert.equal(await readFile(join(root, "package.json"), "utf8"), resolved);
+  assert.equal(await readFile(join(root, style), "utf8"), "new");
+  assert.deepEqual(await update(revision, revision), []);
+});
+
+test("an unresolved conflict prevents writes even when another file is resolved", async t => {
+  const { source, root, put, commit, update } = await fixture(t);
+  const resolved = "src/components/Header.astro";
+  const unresolved = "src/components/Footer.astro";
+  const style = "src/styles/global.css";
+  for (const path of [resolved, unresolved, style])
+    await put(source, path, "old\n");
+  const previous = commit();
+  for (const path of [resolved, unresolved])
+    await put(root, path, "personal\n");
+  await put(root, style, "old\n");
+  for (const path of [resolved, unresolved, style])
+    await put(source, path, "incoming\n");
+  const revision = commit();
+  await put(root, resolved, "personal and incoming\n");
+  await assert.rejects(
+    update(previous, revision, {
+      resolvedFiles: [resolved],
+      resolvedRevision: revision,
+    }),
+    /Conflicting changes: src\/components\/Footer.astro[\s\S]*No files changed/
+  );
+  assert.equal(
+    await readFile(join(root, resolved), "utf8"),
+    "personal and incoming\n"
+  );
+  assert.equal(await readFile(join(root, unresolved), "utf8"), "personal\n");
+  assert.equal(await readFile(join(root, style), "utf8"), "old\n");
+});
+
+test("invalid, duplicate and non-conflicting resolution paths reject the entire update", async t => {
+  const { source, root, put, commit, update } = await fixture(t);
+  const style = "src/styles/global.css";
+  await put(source, style, "old");
+  const previous = commit();
+  await put(root, style, "old");
+  await put(source, style, "new");
+  const revision = commit();
+  for (const [paths, message] of [
+    [["../outside.ts"], /Invalid resolved file path/],
+    [["/src/styles/global.css"], /Invalid resolved file path/],
+    [["src\\styles\\global.css"], /Invalid resolved file path/],
+    [["src/./styles/global.css"], /Invalid resolved file path/],
+    [[style, style], /Duplicate resolved file/],
+    [[style], /Resolved file did not conflict/],
+    [["package.json"], /Resolved file did not conflict/],
+    [["src/content/posts/private.md"], /Resolved file did not conflict/],
+  ]) {
+    await assert.rejects(
+      update(previous, revision, {
+        resolvedFiles: paths,
+        resolvedRevision: revision,
+      }),
+      message
+    );
+    assert.equal(await readFile(join(root, style), "utf8"), "old");
+  }
+});
+
+test("resolutions must be reviewed again when the target revision changes", async t => {
+  const { source, root, put, commit, update } = await fixture(t);
+  const path = "src/components/Header.astro";
+  await put(source, path, "old\n");
+  const previous = commit();
+  await put(root, path, "personal and first incoming\n");
+  await put(source, path, "first incoming\n");
+  const reviewed = commit();
+  await put(source, path, "second incoming\n");
+  const revision = commit();
+  for (const resolvedRevision of [undefined, "main", reviewed])
+    await assert.rejects(
+      update(previous, revision, {
+        resolvedFiles: [path],
+        resolvedRevision,
+      }),
+      /exact reviewed theme revision/
+    );
+  assert.equal(
+    await readFile(join(root, path), "utf8"),
+    "personal and first incoming\n"
+  );
+});
+
+test("CLI resolutions require an explicit full SHA and cannot run in check mode", () => {
+  for (const args of [
+    [],
+    ["--ref", "main"],
+    ["--ref", "a".repeat(40), "--check"],
+  ]) {
+    const result = spawnSync(
+      process.execPath,
+      [
+        join(import.meta.dirname, "update-theme.mjs"),
+        "--resolved-file",
+        "package.json",
+        ...args,
+      ],
+      { encoding: "utf8" }
+    );
+    assert.equal(result.status, 1);
+    assert.match(
+      result.stderr,
+      /--resolved-file requires --ref with a full commit SHA/
+    );
+  }
+});
+
+test("resolution flags cannot bypass malformed package JSON", async t => {
+  const { source, root, put, commit, update } = await fixture(t);
+  await put(source, "package.json", '{"name":"theme"}');
+  const previous = commit();
+  await put(root, "package.json", "invalid JSON");
+  await put(source, "package.json", '{"name":"new-theme"}');
+  const revision = commit();
+  await assert.rejects(
+    update(previous, revision, {
+      resolvedFiles: ["package.json"],
+      resolvedRevision: revision,
+    }),
+    /Resolved file did not conflict[\s\S]*No files changed/
+  );
+  assert.equal(
+    await readFile(join(root, "package.json"), "utf8"),
+    "invalid JSON"
+  );
 });
 
 test("upstream deletions remove clean files but conflict with local edits", async t => {

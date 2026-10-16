@@ -43,11 +43,13 @@ const href = (path: string) =>
               </p>
             </>
           </div>
-          <p class="content-note">
-            {tr(
-              "A sample reading shelf for this theme. Cover designs are illustrative."
-            )}
-          </p>
+          {books.some(book => book.sample) && (
+            <p class="content-note">
+              {tr(
+                "A sample reading shelf for this theme. Cover designs are illustrative."
+              )}
+            </p>
+          )}
           <div class="library-grid">
             {books.map(book => (
               <a class="library-book" href={href(`books/${book.slug}`)}>

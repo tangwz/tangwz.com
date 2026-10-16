@@ -111,11 +111,13 @@ if (!course) Astro.response.status = 404;
                   </>
                 </details>
               ))}
-              <p class="content-note">
-                {tr(
-                  "A proposed course outline for the theme. The programme, timing, and pricing will be announced when ready."
-                )}
-              </p>
+              {course.sample && (
+                <p class="content-note">
+                  {tr(
+                    "A proposed course outline for the theme. The programme, timing, and pricing will be announced when ready."
+                  )}
+                </p>
+              )}
             </section>
             <div id="course-updates" class="newsletter-section">
               <Newsletter interest="independent-creator" />

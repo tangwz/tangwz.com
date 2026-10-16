@@ -7,9 +7,50 @@ import { rehypeMath } from "../src/utils/rehypeMath.ts";
 import {
   formulaCoverageErrors,
   inspectPage,
+  isPublishedArticle,
   sampleNotices,
   sourceFormulas,
 } from "./site-content.mjs";
+
+test("article checks share the publication schedule and exclude templates", () => {
+  const now = Date.parse("2026-10-16T12:00:00Z");
+  const frontmatter = { pubDatetime: "2026-10-16T12:01:00Z" };
+  assert.equal(isPublishedArticle(frontmatter, { now }), false);
+  assert.equal(isPublishedArticle(frontmatter, { now, margin: 59_999 }), false);
+  assert.equal(isPublishedArticle(frontmatter, { now, margin: 60_000 }), true);
+  for (const flag of ["draft", "template"])
+    assert.equal(
+      isPublishedArticle(
+        { ...frontmatter, [flag]: true },
+        { now: now + 60_000 }
+      ),
+      false
+    );
+});
+
+test("MDX formula coverage excludes JavaScript, JSX attributes and comments", async () => {
+  const markdown = [
+    'export const metadata = { formula: "$export$" };',
+    "",
+    "{/* $comment$ */}",
+    "",
+    '<div title="$attribute$">Inline $visible$.</div>',
+    "",
+    '{"$expression$"}',
+    "",
+    "```math",
+    "y = x^2",
+    "```",
+  ].join("\n");
+  assert.deepEqual(await sourceFormulas(markdown, "article.mdx"), [
+    "visible",
+    "y = x^2",
+  ]);
+  assert.deepEqual(
+    await sourceFormulas('export const metadata = "$export$";', "article.md"),
+    ["export"]
+  );
+});
 
 test("formula coverage rejects a disabled renderer and a changed expression", async () => {
   const markdown = "Inline $x > 0$, repeated $x > 0$.\n\n$$\ny = x^2\n$$";

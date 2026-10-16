@@ -70,17 +70,37 @@ npm run check:layout
 
 ## 冲突处理与验证
 
-脚本先计算所有文件的合并结果；遇到冲突时不写入任何候选文件，也不更新锁文件。报错会列出冲突路径。比较锁定 commit、上游目标 commit 和本地文件，手工解决冲突文件并提交这些改动，再次执行 `npm run theme:upgrade`。脚本会保留已经手工整合的变化，同步其余文件，并在整批源码同步成功后推进锁文件。不要单独修改锁文件来绕过失败，否则后续更新会把未合入的变更当作已经同步。
+脚本先计算所有文件的合并结果；遇到冲突时不写入任何候选文件，也不更新锁文件。报错会列出冲突路径。同一字段或文本区域的手工整合结果仍可能被三方合并判为冲突，因此不能仅提交后重复运行原命令。
+
+先固定本次准备审阅的完整目标 SHA，避免解决冲突期间上游分支移动：
 
 ```sh
+theme_revision=$(git ls-remote https://github.com/tangwz/tang.git refs/heads/main | cut -f1)
+npm run theme:update -- --ref "$theme_revision"
+```
+
+比较锁定 commit、该目标 commit 和本地文件，手工整合冲突文件中的全部上游变化及博客适配，然后提交这些文件，保持工作区干净。对仍会冲突的文件显式接受已经审阅的本地版本，例如：
+
+```sh
+npm run theme:update -- --ref "$theme_revision" --resolved-file package.json
+```
+
+`--resolved-file` 可重复传入，使用博客仓库中的文件路径，包括映射后的 `src/pages/en/` 路径。该参数只接受本批同步中确实发生冲突的整份文件；不存在、不属于主题、能自动合并或重复的路径会使整批同步失败。语法错误等非合并冲突不能通过该参数跳过。其余文件仍执行三方合并，尚有任何未解决的冲突时不会写入任何候选文件。接受整份文件意味着需要自己确认其中没有遗漏目标版本的其他改动。
+
+恢复操作必须显式提供 `--ref` 完整 SHA，不能使用移动的分支名或与 `--check` 同用；换用新目标 SHA 时需重新审阅冲突。整批同步成功后才推进锁文件，再执行下面的完整验证。提交同步结果后使用 `npm run theme:update -- --ref main` 恢复跟随主分支。不要单独修改锁文件来绕过失败，否则后续更新会把未合入的变更当作已经同步。
+
+```sh
+pnpm install --frozen-lockfile
 pnpm test
 pnpm lint
 pnpm format:check
 npm run build:release
+pnpm exec playwright install chromium
+npm run check:layout
 ```
 
-测试覆盖三方合并、个人内容保护、新增文件重名、删除冲突、语言路由映射、重复同步和未引用资产的本地删除。构建检查覆盖 canonical、站内链接、图片、RSS、sitemap 和 Pagefind；博客专项检查验证原有文章地址、中文首页和 About 内容，并根据已发布文章的 Markdown 核对每个公式及其重复次数，扫描所有 HTML（包括 noindex 页面）的示例标记和中英文示例说明。普通代码片段不会被当作公式或示例标记。
+测试覆盖三方合并、个人内容保护、新增文件重名、删除冲突、语言路由映射、重复同步、未引用资产的本地删除，以及绑定目标版本的显式冲突恢复。构建检查覆盖 canonical、站内链接、图片、RSS、sitemap 和 Pagefind；博客专项检查复用文章发布规则，根据已发布文章的 Markdown 或 MDX 正文核对公式及其重复次数，排除草稿、模板和未到发布时间的文章。MDX 导出变量、表达式、属性和注释中的公式文本不作为正文公式。所有 HTML（包括 noindex 页面）都会扫描示例标记和中英文示例说明；真实书籍和课程不会显示主题示例说明。
 
-`check:layout` 针对真实生产产物，检查中英文作品库在 1218px 桌面视口下的三列网格、完整行分页和最后一页，以及 768px、390px 视口下的两列、单列和水平溢出。页面大小从配置读取，不固定文章数量。该检查在普通 CI 和主题更新流程中都会执行，因此缺失 CSS 或回退到每页四篇会阻止更新通过。
+`check:layout` 针对真实生产产物，核对中英文作品库与两个 RSS 中全部文章的链接集合，再检查 1218px 桌面视口下的三列网格、完整行分页和最后一页，以及 768px、390px 视口下的两列、单列和水平溢出。文章数量不写死，空列表或遗漏文章也会失败。浏览器检查还验证英文 About 回退的中文 canonical、noindex、hreflang 和 sitemap。该检查在普通 CI 和主题更新流程中都会执行。
 
 GitHub Actions 行为参考：[定时与手动触发](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows)、[token 与 workflow 触发](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)。

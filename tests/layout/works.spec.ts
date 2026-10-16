@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 for (const route of ["/works/", "/en/works/"]) {
   test(`${route} fills the desktop grid and paginates all work`, async ({
     page,
+    request,
   }) => {
     await page.setViewportSize({ width: 1218, height: 853 });
     await page.goto(route);
@@ -10,6 +11,22 @@ for (const route of ["/works/", "/en/works/"]) {
     await expect(collection).toHaveAttribute("data-current-page", "1");
     const cards = collection.locator("[data-work-type]");
     const total = await cards.count();
+    const expected = new Set<string>();
+    for (const feed of ["/rss.xml", "/en/rss.xml"]) {
+      const response = await request.get(feed);
+      expect(response.ok()).toBe(true);
+      for (const match of (await response.text()).matchAll(
+        /<item\b[^>]*>[\s\S]*?<link>(.*?)<\/link>/g
+      )) {
+        const path = new URL(match[1]).pathname.replace(/^\/en\//, "/");
+        expected.add(route.startsWith("/en/") ? `/en${path}` : path);
+      }
+    }
+    expect(expected.size).toBeGreaterThan(0);
+    const articleLinks = await collection
+      .locator('[data-work-type="article"] .portfolio-work-link')
+      .evaluateAll(links => links.map(link => link.getAttribute("href")));
+    expect(articleLinks.sort()).toEqual([...expected].sort());
     const pageSize = Number(await collection.getAttribute("data-page-size"));
     expect(pageSize % 3).toBe(0);
     expect(pageSize).toBeGreaterThanOrEqual(6);

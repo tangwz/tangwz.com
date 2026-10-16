@@ -1,17 +1,24 @@
 import assert from "node:assert/strict";
 import { readdir, readFile, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import config from "../astro-paper.config.ts";
 import { parseFrontmatter } from "@astrojs/markdown-remark";
 import {
   formulaCoverageErrors,
   inspectPage,
+  isPublishedArticle,
   sampleNotices,
   sourceFormulas,
 } from "./site-content.mjs";
 
-const root = fileURLToPath(new URL("../", import.meta.url));
+const root = process.argv[2]
+  ? resolve(process.argv[2])
+  : fileURLToPath(new URL("../", import.meta.url));
+const publication = {
+  margin: config.posts.scheduledPostMargin,
+  now: Date.now(),
+};
 const homepage = await readFile(join(root, "dist/index.html"), "utf8");
 assert.match(homepage, /<html\b[^>]*\blang="zh"/);
 assert.match(homepage, /class="portfolio-home"/);
@@ -29,8 +36,8 @@ for (const directory of directories) {
     join(source, directory.name, "index.md"),
     "utf8"
   );
-  const frontmatter = markdown.split(/^---\s*$/m)[1];
-  if (/^draft:\s*true\s*$/m.test(frontmatter)) continue;
+  const { frontmatter } = parseFrontmatter(markdown);
+  if (!isPublishedArticle(frontmatter, publication)) continue;
   const url = new URL(`/posts/${directory.name}/`, config.site.url).href;
   const html = await readFile(
     join(root, "dist/posts", directory.name, "index.html"),
@@ -122,19 +129,12 @@ for (const path of await filesIn(source)) {
   if (!/\.(md|mdx)$/.test(path) || /[/\\]_[^/\\]*$/.test(path)) continue;
   const markdown = await readFile(path, "utf8");
   const { frontmatter } = parseFrontmatter(markdown);
-  if (
-    frontmatter.draft ||
-    frontmatter.template ||
-    new Date(frontmatter.pubDatetime).getTime() -
-      config.posts.scheduledPostMargin >
-      Date.now()
-  )
-    continue;
+  if (!isPublishedArticle(frontmatter, publication)) continue;
   assert.ok(!frontmatter.sample, `Published theme sample: ${path}`);
   const key = articleKey(frontmatter.title, frontmatter.lang ?? "zh");
   expected.set(key, [
     ...(expected.get(key) ?? []),
-    ...(await sourceFormulas(markdown)),
+    ...(await sourceFormulas(markdown, path)),
   ]);
 }
 let formulas = 0;

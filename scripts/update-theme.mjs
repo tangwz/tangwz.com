@@ -97,6 +97,12 @@ function same(left, right) {
     : left.equals(right);
 }
 
+class ThemeConflict extends Error {
+  constructor(path) {
+    super(`Conflicting changes: ${path}`);
+  }
+}
+
 function mergeValue(base, local, incoming, path) {
   if (isDeepStrictEqual(local, base)) return incoming;
   if (isDeepStrictEqual(incoming, base) || isDeepStrictEqual(local, incoming))
@@ -120,7 +126,7 @@ function mergeValue(base, local, incoming, path) {
     }
     return result;
   }
-  throw new Error(`Conflicting changes: ${path}`);
+  throw new ThemeConflict(path);
 }
 
 async function mergeFile(base, local, incoming, path, temporary) {
@@ -132,7 +138,7 @@ async function mergeFile(base, local, incoming, path, temporary) {
     !incoming ||
     [base, local, incoming].some(value => value.includes(0))
   )
-    throw new Error(`Conflicting changes: ${path}`);
+    throw new ThemeConflict(path);
   if (path === "package.json") {
     const merged = mergeValue(
       JSON.parse(base),
@@ -152,7 +158,9 @@ async function mergeFile(base, local, incoming, path, temporary) {
     maxBuffer: 32 * 1024 * 1024,
   });
   if (result.error) throw result.error;
-  if (result.status !== 0) throw new Error(`Conflicting changes: ${path}`);
+  if (result.status > 0 && result.status <= 127) throw new ThemeConflict(path);
+  if (result.status !== 0)
+    throw new Error(`Cannot merge ${path}: ${result.stderr.toString().trim()}`);
   return result.stdout;
 }
 
@@ -172,7 +180,34 @@ async function readLocal(root, path) {
 }
 
 /** Plan every merge before writing, so conflicts cannot leave a partial update. */
-export async function applyThemeUpdate({ root, source, previous, revision }) {
+export async function applyThemeUpdate({
+  root,
+  source,
+  previous,
+  revision,
+  resolvedFiles = [],
+  resolvedRevision,
+}) {
+  if (
+    resolvedFiles.length &&
+    (!/^[a-f0-9]{40}$/.test(resolvedRevision ?? "") ||
+      resolvedRevision !== revision)
+  )
+    throw new Error(
+      "Resolved files require the exact reviewed theme revision."
+    );
+  const resolutions = new Set();
+  for (const path of resolvedFiles) {
+    if (
+      typeof path !== "string" ||
+      /[\\\0]/.test(path) ||
+      path.split("/").some(part => ["", ".", ".."].includes(part))
+    )
+      throw new Error(`Invalid resolved file path: ${path}`);
+    if (resolutions.has(path))
+      throw new Error(`Duplicate resolved file: ${path}`);
+    resolutions.add(path);
+  }
   const before = themeTree(source, previous);
   const after = themeTree(source, revision);
   const temporary = await mkdtemp(join(tmpdir(), "tang-merge-"));
@@ -204,12 +239,16 @@ export async function applyThemeUpdate({ root, source, previous, revision }) {
             mode: newEntry?.mode ?? oldEntry.mode,
           });
       } catch (error) {
-        conflicts.push(error.message);
+        if (error instanceof ThemeConflict && resolutions.has(path))
+          resolutions.delete(path);
+        else conflicts.push(error.message);
       }
     }
+    for (const path of resolutions)
+      conflicts.push(`Resolved file did not conflict: ${path}`);
     if (conflicts.length)
       throw new Error(
-        `${conflicts.join("\n")}\nNo files changed. Merge these changes manually before updating theme.lock.json.`
+        `${conflicts.join("\n")}\nNo files changed. Resolve the conflicts and rerun with --ref <reviewed SHA> --resolved-file <path>.`
       );
     for (const { path, content, mode } of changes) {
       const target = join(root, path);
@@ -228,8 +267,18 @@ export async function applyThemeUpdate({ root, source, previous, revision }) {
 
 async function main() {
   const { values } = parseArgs({
-    options: { check: { type: "boolean" }, ref: { type: "string" } },
+    options: {
+      check: { type: "boolean" },
+      ref: { type: "string" },
+      "resolved-file": { type: "string", multiple: true, default: [] },
+    },
   });
+  const resolvedFiles = values["resolved-file"];
+  if (
+    resolvedFiles.length &&
+    (values.check || !/^[a-f0-9]{40}$/.test(values.ref ?? ""))
+  )
+    throw new Error("--resolved-file requires --ref with a full commit SHA.");
   const root = fileURLToPath(new URL("../", import.meta.url));
   const lockPath = join(root, "theme.lock.json");
   const lock = JSON.parse(await readFile(lockPath, "utf8"));
@@ -255,7 +304,10 @@ async function main() {
     process.stdout.write(
       `Tang: ${lock.revision.slice(0, 7)} -> ${revision.slice(0, 7)}\n`
     );
-    if (values.check || (revision === lock.revision && ref === lock.ref))
+    if (
+      values.check ||
+      (!resolvedFiles.length && revision === lock.revision && ref === lock.ref)
+    )
       return;
     git(source, ["fetch", "--depth=1", "origin", lock.revision]);
     const changes = await applyThemeUpdate({
@@ -263,6 +315,8 @@ async function main() {
       source,
       previous: lock.revision,
       revision,
+      resolvedFiles,
+      resolvedRevision: values.ref,
     });
     await writeFile(
       lockPath,
