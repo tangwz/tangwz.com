@@ -11,3 +11,17 @@ export function tplStr(
     return value !== undefined && value !== null ? String(value) : "";
   });
 }
+
+export function formatDateInTimezone(
+  date: Date,
+  locale: string | undefined,
+  month: "long" | "short",
+  timeZone: string
+): string {
+  return date.toLocaleDateString(locale === "zh" ? "zh-CN" : "en-US", {
+    month,
+    day: "numeric",
+    year: "numeric",
+    timeZone,
+  });
+}

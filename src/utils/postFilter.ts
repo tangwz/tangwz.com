@@ -1,5 +1,5 @@
-import type { CollectionEntry } from "astro:content";
 import config from "@/config";
+import { isPublished, type PublicationData } from "./publication";
 
 /**
  * Determines whether a post is eligible to be listed/rendered.
@@ -8,9 +8,9 @@ import config from "@/config";
  * - In production, excludes scheduled posts until `pubDatetime` minus the configured margin
  * - In dev, always shows non-draft posts to make authoring easier
  */
-export function postFilter({ data }: CollectionEntry<"posts">) {
-  const isPublishTimePassed =
-    Date.now() >
-    new Date(data.pubDatetime).getTime() - config.posts.scheduledPostMargin;
-  return !data.draft && (import.meta.env.DEV || isPublishTimePassed);
+export function postFilter({ data }: { data: PublicationData }) {
+  return isPublished(data, {
+    development: import.meta.env.DEV,
+    margin: config.posts.scheduledPostMargin,
+  });
 }

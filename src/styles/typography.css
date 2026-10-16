@@ -9,6 +9,8 @@
     h2,
     h3,
     h4,
+    h5,
+    h6,
     th {
       @apply text-foreground mb-3;
     }
@@ -47,6 +49,14 @@
       @apply border-border mx-auto border;
     }
 
+    img[role="button"] {
+      @apply cursor-zoom-in;
+
+      &:focus-visible {
+        @apply outline-2 outline-offset-2 outline-dashed;
+      }
+    }
+
     figcaption {
       @apply opacity-75;
     }
@@ -59,6 +69,21 @@
 
       th {
         @apply py-1.5;
+      }
+
+      th[align="center"],
+      td[align="center"] {
+        text-align: center;
+      }
+
+      th[align="right"],
+      td[align="right"] {
+        text-align: right;
+      }
+
+      th[align="left"],
+      td[align="left"] {
+        text-align: left;
       }
     }
 
@@ -74,8 +99,12 @@
       @apply border-s-accent/80 wrap-break-word opacity-80;
     }
 
-    details {
-      @apply text-foreground inline-block cursor-pointer select-none [&_p]:hidden [&_ul]:my-0!;
+    details:not(.callout) {
+      @apply text-foreground my-6 block;
+    }
+
+    details:not(.callout) > summary {
+      @apply cursor-pointer;
     }
 
     summary {

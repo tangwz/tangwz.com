@@ -1,0 +1,11 @@
+---
+import View from "@/views/Archives.astro";
+import config from "@/config";
+import { getRelativeLocaleUrl } from "astro:i18n";
+
+if (!config.features.showArchives) {
+  return Astro.rewrite(getRelativeLocaleUrl("en", "404"));
+}
+---
+
+<View {...Astro.props} />

@@ -7,10 +7,20 @@
 !/.github
 !tsconfig.json
 !astro.config.ts
+!astro-paper.config.ts
+!/scripts
+!/docs
+!theme.lock.json
 !package.json
 !.prettierrc
 !eslint.config.js
 !README.md
+!/tests
+!playwright.config.ts
+
+# Preserve existing migration documents outside the theme migration.
+docs/superpowers/
+scripts/migrate-old-blog/
 
 # Ignore MDX files
 *.mdx

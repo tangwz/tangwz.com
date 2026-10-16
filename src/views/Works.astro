@@ -1,0 +1,234 @@
+---
+import { useCreatorTranslations } from "@/i18n/creator";
+const tr = useCreatorTranslations(Astro.currentLocale);
+import Layout from "@/layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+import WorkCard from "@/components/WorkCard.astro";
+import Newsletter from "@/components/Newsletter.astro";
+import CreatorIcon from "@/components/CreatorIcon.astro";
+import SearchIcon from "@/assets/icons/IconSearch.svg";
+import { getRelativeLocaleUrl } from "astro:i18n";
+import { getWorks, workTypes } from "@/utils/getWorks";
+import config from "@/config";
+const works = await getWorks(Astro.currentLocale ?? config.site.lang);
+---
+
+<Layout
+  title={`${tr("My Work")} | ${config.site.author}`}
+  description={tr(
+    "Articles, videos, reading notes, and letters, all in one place."
+  )}
+  clientRouting={false}
+>
+  <Header />
+  <main id="main-content" class="portfolio-works-page">
+    <section class="portfolio-works-intro" aria-labelledby="works-heading">
+      <div class="panel-container">
+        <h1 id="works-heading">
+          {tr("My ")}
+          <span class="blue-underline">{tr("Work")}</span>
+        </h1><p>
+          {tr("Articles, videos, reading notes, and letters.")}<br />{
+            tr("Everything I make and share, in one place.")
+          }
+        </p>
+      </div>
+    </section>
+    <section
+      class="wide-container portfolio-collection"
+      aria-label={tr("Browse my work")}
+      data-work-collection
+      data-page-size={config.posts.perPage}
+      data-count-template={tr("{{count}} pieces of work")}
+      data-page-template={tr("Page {{page}} of {{total}}")}
+    >
+      <div class="portfolio-filter-row">
+        <div
+          class="portfolio-filters"
+          role="group"
+          aria-label={tr("Filter by content type")}
+        >
+          {
+            workTypes.map(type => (
+              <button
+                type="button"
+                data-work-filter={type.value}
+                aria-pressed={type.value === "all"}
+              >
+                {tr(type.label)}
+                <span>
+                  {type.value === "all"
+                    ? works.length
+                    : works.filter(work => work.type === type.value).length}
+                </span>
+              </button>
+            ))
+          }
+        </div>
+        {
+          config.features.search === "pagefind" && (
+            <a
+              class="portfolio-work-search"
+              href={getRelativeLocaleUrl(
+                Astro.currentLocale ?? config.site.lang,
+                "search/"
+              )}
+            >
+              <SearchIcon width={20} height={20} />
+              {tr("Search my work")}
+            </a>
+          )
+        }
+      </div>
+      <div class="portfolio-collection-meta">
+        <p data-work-count aria-live="polite">
+          {works.length}
+          {tr("pieces of work")}
+        </p><span>{tr("Dated work: newest first")}</span>
+      </div>
+      <div class="portfolio-work-grid">
+        {works.map(work => <WorkCard {work} />)}
+      </div>
+      <nav
+        class="portfolio-pagination"
+        aria-label={tr("Work pagination")}
+        hidden
+      >
+        <button type="button" data-work-previous
+          ><CreatorIcon name="arrow" size={18} /> {tr("Previous")}</button
+        >
+        <span data-work-page aria-live="polite"></span>
+        <button type="button" data-work-next
+          >{tr("Next")} <CreatorIcon name="arrow" size={18} /></button
+        >
+      </nav>
+      <noscript
+        ><p class="portfolio-noscript">
+          {tr("All work is displayed. Enable JavaScript to filter by type.")}
+        </p></noscript
+      >
+    </section>
+    <div class="portfolio-keep-in-touch wide-container"><Newsletter /></div>
+  </main>
+  <Footer />
+</Layout>
+
+<script>
+  let controller = new AbortController();
+  function setupWorkCollection() {
+    const root = document.querySelector<HTMLElement>("[data-work-collection]");
+    if (!root || root.dataset.bound) return;
+    root.dataset.bound = "true";
+    const cards = [...root.querySelectorAll<HTMLElement>("[data-work-type]")];
+    const filters = [
+      ...root.querySelectorAll<HTMLButtonElement>("[data-work-filter]"),
+    ];
+    const pagination = root.querySelector<HTMLElement>(
+      ".portfolio-pagination"
+    )!;
+    const previous = root.querySelector<HTMLButtonElement>(
+      "[data-work-previous]"
+    )!;
+    const next = root.querySelector<HTMLButtonElement>("[data-work-next]")!;
+    const pageLabel = root.querySelector<HTMLElement>("[data-work-page]")!;
+    const countLabel = root.querySelector<HTMLElement>("[data-work-count]")!;
+    const pageSize = Math.max(1, Number(root.dataset.pageSize) || 9);
+    const render = () => {
+      const url = new URL(window.location.href);
+      const requestedType = url.searchParams.get("type") ?? "all";
+      const type = filters.some(
+        filter => filter.dataset.workFilter === requestedType
+      )
+        ? requestedType
+        : "all";
+      const matching = cards.filter(
+        card => type === "all" || card.dataset.workType === type
+      );
+      const pageCount = Math.max(1, Math.ceil(matching.length / pageSize));
+      const requestedPage = Number(url.searchParams.get("page") ?? 1);
+      const page = Math.min(
+        pageCount,
+        Math.max(1, Number.isInteger(requestedPage) ? requestedPage : 1)
+      );
+      cards.forEach(card => {
+        card.hidden = true;
+      });
+      matching.slice((page - 1) * pageSize, page * pageSize).forEach(card => {
+        card.hidden = false;
+      });
+      filters.forEach(filter =>
+        filter.setAttribute(
+          "aria-pressed",
+          String(filter.dataset.workFilter === type)
+        )
+      );
+      countLabel.textContent =
+        matching.length === 1 && document.documentElement.lang === "en"
+          ? "1 piece of work"
+          : (root.dataset.countTemplate ?? "").replace(
+              "{{count}}",
+              String(matching.length)
+            );
+      pagination.hidden = pageCount <= 1;
+      previous.disabled = page <= 1;
+      next.disabled = page >= pageCount;
+      pageLabel.textContent = (root.dataset.pageTemplate ?? "")
+        .replace("{{page}}", String(page))
+        .replace("{{total}}", String(pageCount));
+      root.dataset.currentPage = String(page);
+    };
+    const update = (type: string, page = 1) => {
+      const url = new URL(window.location.href);
+      if (type === "all") url.searchParams.delete("type");
+      else url.searchParams.set("type", type);
+      if (page === 1) url.searchParams.delete("page");
+      else url.searchParams.set("page", String(page));
+      if (url.href !== window.location.href) {
+        window.history.pushState(null, "", url);
+      }
+      render();
+      document.dispatchEvent(new Event("locale:url-change"));
+    };
+    filters.forEach(filter =>
+      filter.addEventListener(
+        "click",
+        () => update(filter.dataset.workFilter!),
+        { signal: controller.signal }
+      )
+    );
+    [previous, next].forEach(button =>
+      button.addEventListener(
+        "click",
+        () => {
+          const type = filters.find(
+            filter => filter.getAttribute("aria-pressed") === "true"
+          )!.dataset.workFilter!;
+          update(
+            type,
+            Number(root.dataset.currentPage) + (button === next ? 1 : -1)
+          );
+          const reducedMotion = window.matchMedia(
+            "(prefers-reduced-motion: reduce)"
+          ).matches;
+          root.scrollIntoView({
+            behavior: reducedMotion ? "instant" : "smooth",
+            block: "start",
+          });
+          filters
+            .find(filter => filter.getAttribute("aria-pressed") === "true")!
+            .focus({ preventScroll: true });
+        },
+        { signal: controller.signal }
+      )
+    );
+    window.addEventListener("popstate", render, { signal: controller.signal });
+    render();
+  }
+  document.addEventListener("astro:before-swap", () => {
+    controller.abort();
+    controller = new AbortController();
+  });
+  document.addEventListener("astro:page-load", setupWorkCollection);
+  setupWorkCollection();
+</script>

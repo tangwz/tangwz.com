@@ -1,0 +1,43 @@
+---
+import { useCreatorTranslations } from "@/i18n/creator";
+const tr = useCreatorTranslations(Astro.currentLocale);
+import { getRelativeLocaleUrl } from "astro:i18n";
+import Layout from "@/layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+import { letters } from "@/data/letters";
+import config from "@/config";
+type Props = { letter: (typeof letters)[number] };
+const { letter } = Astro.props;
+const href = (path: string) =>
+  getRelativeLocaleUrl(Astro.currentLocale ?? config.site.lang, path);
+---
+
+<Layout title={`${letter.title} | The Sunday Edit`} description={letter.intro}>
+  <Header /><main id="main-content" data-pagefind-body class="detail-content">
+    <a class="back-link" href={href("newsletter")}
+      >{tr("← Back to The Sunday Edit")}</a
+    ><h1>{letter.title}</h1><p class="content-note">
+      {
+        tr(
+          letter.sample
+            ? "The Sunday Edit · Sample letter "
+            : "The Sunday Edit · Letter "
+        )
+      }
+      {letter.number}
+    </p><p>{letter.intro}</p>{
+      letter.paragraphs.map(paragraph => <p>{paragraph}</p>)
+    }<h2>{tr("A question for your Sunday")}</h2><p>{letter.question}</p><p>
+      {tr("Stay curious,")}<br />{config.site.author}
+    </p>{
+      letter.sample && (
+        <p class="content-note">
+          {tr("This is a sample letter included with the theme.")}
+        </p>
+      )
+    }<a class="button button-orange" href={href("newsletter")}
+      >{tr("More from The Sunday Edit ↗")}</a
+    >
+  </main><Footer />
+</Layout>

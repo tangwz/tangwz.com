@@ -1,0 +1,83 @@
+---
+import { useCreatorTranslations, formatDate } from "@/i18n/creator";
+const tr = useCreatorTranslations(Astro.currentLocale);
+import config from "@/config";
+import { creator } from "@/data/creator";
+type Props = {
+  date: Date;
+  timezone?: string;
+  author?: string;
+  title: string;
+  canonicalURL?: string;
+};
+const { date, timezone, author = creator.name, canonicalURL } = Astro.props;
+const url = encodeURIComponent(
+  canonicalURL ?? new URL(Astro.url.pathname, Astro.site).href
+);
+const icons = import.meta.glob<{
+  default: (_props: Record<string, unknown>) => unknown;
+}>("/src/assets/icons/socials/*.svg");
+const platforms: Record<string, string> = {
+  x: "X",
+  facebook: "Facebook",
+  linkedin: "LinkedIn",
+  mail: "Email",
+};
+const shares = (
+  await Promise.all(
+    config.shareLinks.map(async item => ({
+      name: item.name,
+      label:
+        item.linkTitle ??
+        `${tr("Share:")} ${platforms[item.name] ?? item.name}`,
+      href: `${item.url}${url}`,
+      Icon: (await icons[`/src/assets/icons/socials/${item.name}.svg`]?.())
+        ?.default,
+    }))
+  )
+).filter(item => item.Icon);
+---
+
+<div class="article-meta" data-pagefind-ignore>
+  <div class="article-author">
+    {
+      author === creator.name && creator.images.portrait ? (
+        <img src={creator.images.portrait} alt="" width="60" height="60" />
+      ) : (
+        <span class="author-monogram" aria-hidden="true">
+          {author.slice(0, 1)}
+        </span>
+      )
+    }
+    <span>{author}</span>
+  </div>
+  <span class="meta-divider" aria-hidden="true">/</span>
+  <time datetime={date.toISOString()}
+    >{formatDate(date, Astro.currentLocale, "long", timezone)}</time
+  >
+  {
+    shares.length > 0 && (
+      <>
+        <span class="meta-divider" aria-hidden="true">
+          /
+        </span>
+        <div class="article-share">
+          <span>{tr("Share:")}</span>
+          {shares.map(
+            ({ label, Icon, href }) =>
+              Icon && (
+                <a
+                  {href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={label}
+                >
+                  <Icon width={16} height={16} />
+                </a>
+              )
+          )}
+        </div>
+      </>
+    )
+  }
+</div>

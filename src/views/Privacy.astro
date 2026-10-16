@@ -1,0 +1,77 @@
+---
+import { useCreatorTranslations } from "@/i18n/creator";
+const tr = useCreatorTranslations(Astro.currentLocale);
+import Layout from "@/layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+import config from "@/config";
+import { creator } from "@/data/creator";
+const newsletter = creator.newsletter;
+---
+
+<Layout title={`${tr("Privacy")} | ${tr(config.site.title)}`}>
+  <Header /><main id="main-content" class="detail-content">
+    <span class="eyebrow">{tr("A NOTE ON PRIVACY")}</span><h1>
+      {tr("Your inbox.")}<br /><em>{tr("Your choice.")}</em>
+    </h1>{
+      newsletter.enabled ? (
+        <>
+          <p>
+            {tr(
+              "Newsletter subscriptions are handled by {{provider}}."
+            ).replace("{{provider}}", newsletter.provider)}{" "}
+            {tr(
+              "Your email address is used to send the newsletter and the updates you agreed to receive."
+            )}
+          </p>
+          <p>
+            {tr(
+              "Every email includes an unsubscribe link. To request deletion of your subscription details, contact"
+            )}{" "}
+            <a href={`mailto:${newsletter.contactEmail}`}>
+              {newsletter.contactEmail}
+            </a>
+            .
+          </p>
+          <p>
+            <a
+              href={newsletter.privacyURL}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {tr("Read the email provider's privacy policy")}
+            </a>
+          </p>
+        </>
+      ) : (
+        <>
+          <>
+            <p>
+              {tr(
+                "Newsletter subscriptions are not open. This site does not collect or store email addresses."
+              )}
+            </p>
+            <h2>{tr("When subscriptions open")}</h2>
+            <p>
+              {tr(
+                "Before enabling newsletter signup, this page will explain which email service handles subscriptions, how email addresses are used, and how to unsubscribe or request deletion."
+              )}
+            </p>
+          </>
+        </>
+      )
+    }<h2>{tr("Your preferences")}</h2><p>
+      {
+        tr(
+          "Your color theme is stored in this browser. This preference does not contain personal information."
+        )
+      }
+    </p><h2>{tr("Browsing the site")}</h2><p>
+      {
+        tr(
+          "The theme does not include analytics or advertising scripts. Search runs in your browser. Your hosting provider may process standard request logs under its own privacy policy."
+        )
+      }
+    </p>
+  </main><Footer />
+</Layout>

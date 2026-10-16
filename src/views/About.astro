@@ -1,0 +1,38 @@
+---
+import { getEntry, render } from "astro:content";
+import Layout from "@/layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+import { getRelativeLocaleUrl } from "astro:i18n";
+import config from "@/config";
+
+const page = await getEntry("pages", "about");
+if (!page) throw new Error("Missing src/content/pages/about.md");
+const { Content } = await render(page);
+const isFallback = (Astro.currentLocale ?? config.site.lang) !== "zh";
+const canonicalURL =
+  page.data.canonicalURL ??
+  new URL(getRelativeLocaleUrl("zh", "about/"), Astro.site).href;
+---
+
+<Layout
+  title={`${page.data.title} | ${config.site.title}`}
+  description={page.data.description}
+  {canonicalURL}
+  indexable={!isFallback}
+  availableLocales={["zh"]}
+  ogImage={page.data.ogImage}
+>
+  <Header />
+  <main
+    id="main-content"
+    data-pagefind-body={!isFallback ? "" : undefined}
+    class="wide-container"
+  >
+    <div class="page-header"><h1>{page.data.title}</h1></div>
+    <article class="prose dark:prose-invert mb-16 max-w-none" lang="zh">
+      <Content />
+    </article>
+  </main>
+  <Footer />
+</Layout>

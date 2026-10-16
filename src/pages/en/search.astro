@@ -1,0 +1,11 @@
+---
+import View from "@/views/Search.astro";
+import config from "@/config";
+import { getRelativeLocaleUrl } from "astro:i18n";
+
+if (config.features.search !== "pagefind") {
+  return Astro.rewrite(getRelativeLocaleUrl("en", "404"));
+}
+---
+
+<View {...Astro.props} />

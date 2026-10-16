@@ -1,0 +1,54 @@
+---
+import { useCreatorTranslations } from "@/i18n/creator";
+const tr = useCreatorTranslations(Astro.currentLocale);
+import { getRelativeLocaleUrl } from "astro:i18n";
+import Layout from "@/layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+import Newsletter from "@/components/Newsletter.astro";
+import { getLetters } from "@/data/letters";
+import config from "@/config";
+const letters = getLetters(Astro.currentLocale ?? config.site.lang);
+const href = (path: string) =>
+  getRelativeLocaleUrl(Astro.currentLocale ?? config.site.lang, path);
+---
+
+<Layout
+  title={`The Sunday Edit | ${tr(config.site.title)}`}
+  description={tr(
+    "A thoughtful letter on creating, building, and living with intention."
+  )}
+>
+  <Header /><main id="main-content" class="wide-container">
+    <div class="page-header">
+      <span class="eyebrow">{tr("LET'S KEEP IN TOUCH")}</span><h1>
+        {tr("The Sunday ")}
+        <em>{tr("Edit.")}</em>
+      </h1><p>
+        {
+          tr(
+            "Less scrolling. A little more perspective. A letter about ideas worth sitting with, from my corner of the internet to yours."
+          )
+        }
+      </p>
+    </div><Newsletter /><section class="letter-list">
+      <span class="eyebrow">{tr("A TASTE OF WHAT'S TO COME")}</span><h2>
+        {tr("Letters to")}
+        <em>{tr("a curious mind.")}</em>
+      </h2>{
+        letters.length > 0 && letters.every(letter => letter.sample) && (
+          <p class="content-note">{tr("Sample letters from this theme.")}</p>
+        )
+      }{
+        letters.map(letter => (
+          <a href={href(`newsletter/${letter.slug}`)}>
+            {letter.title}
+            <span>
+              {tr(letter.sample ? "Sample " : "Letter")} {letter.number} ↗
+            </span>
+          </a>
+        ))
+      }
+    </section>
+  </main><Footer />
+</Layout>

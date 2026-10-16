@@ -1,0 +1,163 @@
+---
+import { useCreatorTranslations } from "@/i18n/creator";
+const tr = useCreatorTranslations(Astro.currentLocale);
+import { getRelativeLocaleUrl } from "astro:i18n";
+import Layout from "@/layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+import WorkCard from "@/components/WorkCard.astro";
+import Newsletter from "@/components/Newsletter.astro";
+import CreatorIcon from "@/components/CreatorIcon.astro";
+import { creator } from "@/data/creator";
+import { getWorks } from "@/utils/getWorks";
+import config from "@/config";
+const locale = Astro.currentLocale ?? config.site.lang;
+const href = (path: string) => getRelativeLocaleUrl(locale, path);
+const works = await getWorks(locale);
+const articles = works.filter(work => work.type === "article");
+const videos = works.filter(work => work.type === "video");
+const featuredCandidates = [
+  videos[0],
+  articles[0],
+  works.find(work => work.type === "reading"),
+  articles[1],
+  videos[1],
+  works.find(work => work.type === "letter"),
+  ...works,
+].filter(work => work !== undefined);
+const featured = featuredCandidates
+  .filter(
+    (work, index) =>
+      featuredCandidates.findIndex(item => item.id === work.id) === index
+  )
+  .slice(0, config.posts.perIndex);
+---
+
+<Layout
+  title={tr(config.site.title)}
+  description={tr(
+    "A developer who writes, makes videos, and turns ideas into useful things."
+  )}
+>
+  <Header />
+  <main id="main-content" data-pagefind-body class="portfolio-home">
+    <div class="portfolio-home-panel">
+      <section
+        class="portfolio-hero panel-container"
+        aria-labelledby="hero-heading"
+      >
+        <div class="portfolio-portrait">
+          <span class="portfolio-portrait-circle" aria-hidden="true"></span>
+          <img
+            src={creator.images.portrait || creator.images.desk}
+            alt={creator.images.portrait
+              ? creator.name
+              : tr("My creative workspace: a laptop, notebook, and camera")}
+            width="700"
+            height="780"
+            fetchpriority="high"
+          />
+          <svg
+            class="portfolio-portrait-swoosh"
+            viewBox="0 0 440 450"
+            fill="none"
+            aria-hidden="true"
+            ><path d="M47 375C-30 226 32 15 165 39M143 24l25 16-30 5"
+            ></path></svg
+          >
+          {
+            !creator.images.portrait && (
+              <span class="portfolio-photo-caption">
+                {tr("Where ideas become things.")}
+              </span>
+            )
+          }
+        </div>
+        <div class="portfolio-hero-copy">
+          <h1 id="hero-heading">
+            {tr("Hey ")}
+            <span class="blue-underline">{tr("Friends")}</span>
+            <span class="portfolio-wave" aria-hidden="true">👋</span>
+          </h1>
+          <p class="portfolio-hero-intro">
+            {
+              tr(
+                "I'm {{name}}. I'm a developer, writer, and video creator sharing ideas on "
+              ).replace("{{name}}", creator.name)
+            }
+            <a href={href("works/")}
+              >{
+                tr("technology, creativity, and building a meaningful life.")
+              }</a
+            >
+          </p>
+          <div class="portfolio-hero-actions">
+            <a class="button button-blue" href={href("works/")}
+              >{tr("Explore my work")} <CreatorIcon name="arrow" size={20} /></a
+            >
+          </div>
+        </div>
+      </section>
+    </div>
+    <section
+      id="about"
+      class="portfolio-about wide-container"
+      aria-labelledby="about-heading"
+    >
+      <h2 id="about-heading">
+        {tr("A Little")}<br /><span class="blue-underline"
+          >{tr("About Me")}</span
+        >
+      </h2>
+      <div class="portfolio-about-copy">
+        <p>
+          {
+            tr(
+              "I'm a programmer with a background in infrastructure and backend development. I also love finding the right words and turning an idea into a video."
+            )
+          }
+        </p>
+        <p>
+          {
+            tr(
+              "This is where those worlds meet. I share what I'm learning, the things I'm making, and notes from the books that stay with me."
+            )
+          }
+        </p>
+        <a class="text-link" href={href("about/")}
+          >{tr("Read my story")} <CreatorIcon name="arrow" size={20} /></a
+        >
+      </div>
+    </section>
+    <section
+      class="portfolio-featured wide-container"
+      aria-labelledby="featured-heading"
+      data-pagefind-ignore
+    >
+      <div class="portfolio-section-heading">
+        <div>
+          <h2 id="featured-heading">
+            {tr("Things I've")}<br /><span class="blue-underline"
+              >{tr("Been Making")}</span
+            >
+          </h2><p>{tr("Words, videos, and ideas worth sharing.")}</p>
+        </div>
+      </div>
+      <div class="portfolio-work-grid">
+        {featured.map(work => <WorkCard {work} />)}
+      </div>
+      <div class="portfolio-grid-action">
+        <a class="button button-dark" href={href("works/")}
+          >{tr("Explore all my work")} <CreatorIcon name="arrow" size={20} /></a
+        >
+      </div>
+    </section>
+    <section
+      class="portfolio-keep-in-touch wide-container"
+      aria-label={tr("Keep in touch")}
+    >
+      <Newsletter />
+    </section>
+  </main>
+  <Footer />
+</Layout>

@@ -1,0 +1,49 @@
+---
+import { useCreatorTranslations } from "@/i18n/creator";
+const tr = useCreatorTranslations(Astro.currentLocale);
+import type { MarkdownHeading } from "astro";
+type Props = { headings: MarkdownHeading[]; label?: string; mobile?: boolean };
+const {
+  headings,
+  label = tr("In this article:"),
+  mobile = false,
+} = Astro.props;
+const items = headings.filter(heading => heading.depth === 2);
+---
+
+{
+  items.length > 0 && (
+    <nav
+      class:list={["article-toc", { "toc-mobile": mobile }]}
+      aria-label={tr(mobile ? "Mobile table of contents" : "Table of contents")}
+      data-pagefind-ignore
+    >
+      <p class="toc-heading">{label}</p>
+      <ol>
+        {items.map((heading, index) => (
+          <li>
+            <a href={`#${heading.slug}`}>
+              <svg
+                class="toc-chevron"
+                viewBox="0 0 12 20"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="m2 2 8 8-8 8"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              <span>
+                {index + 1}) {heading.text}
+              </span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    </nav>
+  )
+}

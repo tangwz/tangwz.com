@@ -1,4 +1,3 @@
-/* Register design tokens for Tailwind v4 */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -7,28 +6,42 @@
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
-  --font-app: var(--font-google-sans-code);
+  --font-app: var(--font-arimo);
 }
-
-/* Light theme values */
 :root,
 [data-theme="light"] {
-  --background: #fdfdfd;
-  --foreground: #282728;
-  --accent: #006cac;
+  color-scheme: light;
+  --background: #ffffff;
+  --foreground: #1b1624;
+  --accent: #156882;
   --accent-foreground: #ffffff;
-  --muted: #e6e6e6;
-  --muted-foreground: #6b7280;
-  --border: #ece9e9;
+  --muted: #f9f6f3;
+  --muted-foreground: #746f7b;
+  --border: #e6e1de;
+  --surface: #ffffff;
+  --surface-decoration: #f2eeea;
+  --soft-blue: #dff5fc;
+  --soft-sand: #eee8df;
+  --panel-shadow: #e0d8d0a6;
+  --button-solid: #1b1624;
+  --button-solid-ink: #ffffff;
+  --button-solid-hover: #39313f;
 }
-
-/* Dark theme values */
 [data-theme="dark"] {
-  --background: #212737;
-  --foreground: #eaedf3;
-  --accent: #ff6b01;
-  --accent-foreground: #ffffff;
-  --muted: #343f60;
-  --muted-foreground: #afb9ca;
-  --border: #ab4b08;
+  color-scheme: dark;
+  --background: #17151b;
+  --foreground: #f5f0eb;
+  --accent: #75d4f3;
+  --accent-foreground: #1b1624;
+  --muted: #25212a;
+  --muted-foreground: #b9b1bd;
+  --border: #443b49;
+  --surface: #201c25;
+  --surface-decoration: #2e2933;
+  --soft-blue: #243840;
+  --soft-sand: #302a2c;
+  --panel-shadow: #00000055;
+  --button-solid: #e9e1ed;
+  --button-solid-ink: #1b1624;
+  --button-solid-hover: #ffffff;
 }

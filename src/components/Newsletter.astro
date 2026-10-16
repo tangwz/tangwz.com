@@ -1,0 +1,127 @@
+---
+import { useCreatorTranslations } from "@/i18n/creator";
+const tr = useCreatorTranslations(Astro.currentLocale);
+import { creator } from "@/data/creator";
+import { getRelativeLocaleUrl } from "astro:i18n";
+import config from "@/config";
+type Props = { compact?: boolean; interest?: string };
+const { compact = false, interest = "newsletter" } = Astro.props;
+const id = `email-${interest}`;
+const { enabled } = creator.newsletter;
+const newsletterURL = getRelativeLocaleUrl(
+  Astro.currentLocale ?? config.site.lang,
+  "newsletter/"
+);
+const privacyURL = getRelativeLocaleUrl(
+  Astro.currentLocale ?? config.site.lang,
+  "privacy"
+);
+---
+
+<div class:list={{ "newsletter-frame": !compact }}>
+  <section
+    class:list={["newsletter-block", { "newsletter-compact": compact }]}
+    aria-label={tr("The Sunday Edit newsletter")}
+  >
+    <div class="newsletter-copy">
+      <svg
+        class="newsletter-plane"
+        viewBox="0 0 90 65"
+        fill="none"
+        aria-hidden="true"
+      >
+        <>
+          <path d="m5 30 39-13 42 35-49-15-9 9-1-13-22-3Z" fill="var(--purple)"
+          ></path>
+          <path
+            d="m32 24 54 28-49-15-5-13Zm-9-3C6 13 11 6 16 4m7 11-10-8m14 5-9-8"
+            stroke="var(--ink)"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"></path>
+        </>
+      </svg>
+      <h2>
+        {tr(enabled ? "Subscribe to " : "Stay in touch with ")}<strong
+          >{creator.newsletter.shortName}</strong
+        >
+      </h2>
+      <p class:list={{ "compact-hidden": compact }}>
+        {
+          tr("A thoughtful letter from {{name}}.").replace(
+            "{{name}}",
+            creator.name
+          )
+        }<br />{tr("Free to read, whenever I have something worth sharing.")}
+      </p>
+    </div>
+    <div class="newsletter-signup">
+      <p class="newsletter-description">
+        {
+          tr(
+            compact
+              ? "A free letter about what I’m reading, what I’m building, and what I’m learning about technology, creativity, and an independent life."
+              : enabled
+                ? "I share ideas on technology, creativity, and building an independent business, along with notes from the books I’m reading. Join me for a little perspective in your inbox."
+                : "Ideas on technology, creativity, and building an independent business, along with notes from the books I’m reading."
+          )
+        }
+      </p>
+      {
+        enabled ? (
+          <form
+            class="newsletter-form"
+            action={creator.newsletter.action}
+            method="post"
+          >
+            <label for={id} class="sr-only">
+              {tr("Your email address")}
+            </label>
+            <div class="email-field">
+              <>
+                <input
+                  id={id}
+                  name="email"
+                  type="email"
+                  autocomplete="email"
+                  placeholder={tr("Your email")}
+                  required
+                />
+                <button
+                  type="submit"
+                  aria-label={tr("Subscribe to The Sunday Edit")}
+                >
+                  {tr("Subscribe")}
+                </button>
+              </>
+            </div>
+            <input type="hidden" name="interest" value={interest} />
+            <label class="signup-consent compact-consent newsletter-consent">
+              <input type="checkbox" name="consent" value="true" required />
+              <span>
+                {tr(
+                  "By subscribing, you’ll receive my free newsletter and occasional updates about books and courses. You can unsubscribe at any time. Read the"
+                )}{" "}
+                <a href={privacyURL}>{tr("privacy policy")}</a>.
+              </span>
+            </label>
+          </form>
+        ) : (
+          <div class="newsletter-unavailable">
+            <p class="newsletter-closed-label">
+              {tr("Subscriptions are not open yet.")}
+            </p>
+            <p>
+              {tr(
+                "For now, you can read the letters here. No email address is collected."
+              )}
+            </p>
+            <a class="text-link" href={newsletterURL}>
+              {tr("Read the letters")} <span aria-hidden="true">→</span>
+            </a>
+          </div>
+        )
+      }
+    </div>
+  </section>
+</div>

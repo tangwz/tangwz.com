@@ -1,0 +1,42 @@
+---
+import config from "@/config";
+type Props = { title: string; image?: string; color?: string };
+const { title, image, color = "blue" } = Astro.props;
+---
+
+<figure
+  class:list={["article-cover", `cover-${color}`, { "cover-image": image }]}
+>
+  {
+    image ? (
+      <img
+        src={image}
+        alt={title}
+        width="1200"
+        height="630"
+        fetchpriority="high"
+      />
+    ) : (
+      <>
+        <svg
+          class="cover-swoosh cover-swoosh-top"
+          viewBox="0 0 200 120"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path d="M198 4C20 20-15 38 79 96" />
+        </svg>
+        <span class="cover-title">{title}</span>
+        <span class="cover-signature">{config.site.author}</span>
+        <svg
+          class="cover-swoosh cover-swoosh-bottom"
+          viewBox="0 0 200 120"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path d="M134 7c109 43-91 63-96 109" />
+        </svg>
+      </>
+    )
+  }
+</figure>
