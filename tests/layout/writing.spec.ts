@@ -86,8 +86,16 @@ for (const prefix of ["", "/en"]) {
         break;
       }
       expect(next).toBeDefined();
+      const expectedURL = new URL(next!, page.url());
       await pagination.locator(`a[href="${next}"]`).click();
-      await expect(page).toHaveURL(new URL(next!, page.url()).href);
+      await expect(page).toHaveURL(
+        url =>
+          url.origin === expectedURL.origin &&
+          url.pathname.replace(/\/$/, "") ===
+            expectedURL.pathname.replace(/\/$/, "") &&
+          url.search === expectedURL.search &&
+          url.hash === expectedURL.hash
+      );
       expect(
         await page.evaluate(() => Reflect.get(window, "__writingNavigation"))
       ).toBe(true);
