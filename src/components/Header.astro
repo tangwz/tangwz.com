@@ -1,6 +1,9 @@
 ---
 import { useCreatorTranslations, translate } from "@/i18n/creator";
+import { useTranslations } from "@/i18n";
+import CreatorIcon from "./CreatorIcon.astro";
 const tr = useCreatorTranslations(Astro.currentLocale);
+const { a11y } = useTranslations(Astro.currentLocale);
 import { getRelativeLocaleUrl } from "astro:i18n";
 import { switchLocaleUrl, resolveLocale } from "@/i18n/routing";
 import config from "@/config";
@@ -32,65 +35,192 @@ const isWorksPage =
         ><path d="M3 12C43 28 69-11 115 5c17 6 29 8 42 3"></path></svg
       >
     </a>
-    <nav class="portfolio-nav" aria-label={tr("Main navigation")}>
-      <a href={works} aria-current={isWorksPage ? "page" : undefined}
-        >{tr("My Work")}</a
-      >
-      <a href={`${home}#about`}>{tr("About Me")}</a>
-    </nav>
-    <a class="button button-coral portfolio-subscribe" href={newsletter}
-      >{creator.newsletter.enabled && <span>{tr("Join the ")}</span>}{
-        tr("Newsletter")
-      }</a
+    <button
+      class="portfolio-menu-toggle"
+      type="button"
+      aria-controls="portfolio-menu"
+      aria-expanded="false"
+      aria-label={a11y.openMenu}
+      data-open-label={a11y.openMenu}
+      data-close-label={a11y.closeMenu}
     >
-    <div class="portfolio-preferences">
-      <a
-        class="locale-switch"
-        href={localeURL}
-        hreflang={targetLocale}
-        lang={targetLocale}
-        data-locale-switch
-        aria-label={tr("Switch language")}
+      <CreatorIcon name="menu" class="portfolio-menu-icon" />
+      <CreatorIcon name="close" class="portfolio-close-icon" />
+    </button>
+    <div id="portfolio-menu" class="portfolio-menu">
+      <nav class="portfolio-nav" aria-label={tr("Main navigation")}>
+        <a href={works} aria-current={isWorksPage ? "page" : undefined}
+          >{tr("My Work")}</a
+        >
+        <a href={`${home}#about`}>{tr("About Me")}</a>
+      </nav>
+      <a class="button button-coral portfolio-subscribe" href={newsletter}
+        >{creator.newsletter.enabled && <span>{tr("Join the ")}</span>}{
+          tr("Newsletter")
+        }</a
       >
-        {targetLocale === "zh" ? translate("zh", "Chinese") : "EN"}
-      </a>
-      {
-        config.features.lightAndDarkMode && (
-          <button
-            id="theme-btn"
-            type="button"
-            class="theme-switch"
-            aria-label={tr("Switch to dark mode")}
-            aria-pressed="false"
-            data-light-label={tr("Switch to light mode")}
-            data-dark-label={tr("Switch to dark mode")}
-          >
-            <svg
-              class="theme-sun"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.7"
-              aria-hidden="true"
+      <div class="portfolio-preferences">
+        <a
+          class="locale-switch"
+          href={localeURL}
+          hreflang={targetLocale}
+          lang={targetLocale}
+          data-locale-switch
+          aria-label={tr("Switch language")}
+        >
+          {targetLocale === "zh" ? translate("zh", "Chinese") : "EN"}
+        </a>
+        {
+          config.features.lightAndDarkMode && (
+            <button
+              id="theme-btn"
+              type="button"
+              class="theme-switch"
+              aria-label={tr("Switch to dark mode")}
+              aria-pressed="false"
+              data-light-label={tr("Switch to light mode")}
+              data-dark-label={tr("Switch to dark mode")}
             >
-              <>
-                <circle cx="12" cy="12" r="4" />
-                <path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5" />
-              </>
-            </svg>
-            <svg
-              class="theme-moon"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.7"
-              aria-hidden="true"
-            >
-              <path d="M20.5 14.2A9 9 0 0 1 9.8 3.5a9 9 0 1 0 10.7 10.7Z" />
-            </svg>
-          </button>
-        )
-      }
+              <svg
+                class="theme-sun"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                aria-hidden="true"
+              >
+                <>
+                  <circle cx="12" cy="12" r="4" />
+                  <path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5" />
+                </>
+              </svg>
+              <svg
+                class="theme-moon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+                aria-hidden="true"
+              >
+                <path d="M20.5 14.2A9 9 0 0 1 9.8 3.5a9 9 0 1 0 10.7 10.7Z" />
+              </svg>
+            </button>
+          )
+        }
+      </div>
     </div>
   </div>
 </header>
+
+<script is:inline>
+  // Initialize before paint without waiting for deferred modules.
+  (() => {
+    let menuController;
+
+    function setupMenu() {
+      menuController?.abort();
+      const header = document.querySelector(".portfolio-header");
+      const button = header?.querySelector(".portfolio-menu-toggle");
+      const menu = header?.querySelector("#portfolio-menu");
+      if (!header || !button || !menu) return;
+
+      menuController = new AbortController();
+      const { signal } = menuController;
+      const mobile = window.matchMedia("(max-width: 781px)");
+      let toggleFocused = document.activeElement === button;
+
+      button.addEventListener("focus", () => (toggleFocused = true), {
+        signal,
+      });
+      button.addEventListener(
+        "blur",
+        () => {
+          // Desktop CSS can clear focus before the media-query change fires.
+          if (mobile.matches) toggleFocused = false;
+        },
+        { signal }
+      );
+
+      const setOpen = open => {
+        button.setAttribute("aria-expanded", String(open));
+        button.setAttribute(
+          "aria-label",
+          (open ? button.dataset.closeLabel : button.dataset.openLabel) ??
+            "Toggle menu"
+        );
+        const hidden = mobile.matches && !open;
+        if (hidden && menu.contains(document.activeElement)) {
+          button.focus();
+        }
+        menu.hidden = hidden;
+      };
+      const reset = () => {
+        setOpen(false);
+        if (!mobile.matches && toggleFocused) {
+          toggleFocused = false;
+          menu
+            .querySelector(".portfolio-nav a")
+            ?.focus({ preventScroll: true });
+        }
+      };
+
+      button.addEventListener(
+        "click",
+        () => setOpen(button.getAttribute("aria-expanded") !== "true"),
+        { signal }
+      );
+      document.addEventListener(
+        "click",
+        event => {
+          if (!mobile.matches || !(event.target instanceof Node)) return;
+          const link =
+            event.target instanceof Element && menu.contains(event.target)
+              ? event.target.closest("a")
+              : null;
+          if (!header.contains(event.target) || link) {
+            setOpen(false);
+            if (link) {
+              const destination = new URL(link.href);
+              if (
+                destination.hash &&
+                destination.origin === location.origin &&
+                destination.pathname === location.pathname &&
+                destination.search === location.search
+              ) {
+                // Native fragment navigation can reset focus after this handler.
+                requestAnimationFrame(() => {
+                  if (!signal.aborted && menu.hidden) {
+                    button.focus({ preventScroll: true });
+                  }
+                });
+              }
+            }
+          }
+        },
+        { signal }
+      );
+      document.addEventListener(
+        "keydown",
+        event => {
+          if (
+            event.key === "Escape" &&
+            button.getAttribute("aria-expanded") === "true"
+          ) {
+            setOpen(false);
+            button.focus();
+          }
+        },
+        { signal }
+      );
+      mobile.addEventListener("change", reset, { signal });
+      header.dataset.menuReady = "true";
+      reset();
+    }
+
+    setupMenu();
+    document.addEventListener("astro:after-swap", setupMenu);
+    document.addEventListener("astro:before-swap", () =>
+      menuController?.abort()
+    );
+  })();
+</script>

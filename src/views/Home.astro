@@ -5,6 +5,7 @@ import { getRelativeLocaleUrl } from "astro:i18n";
 import Layout from "@/layouts/Layout.astro";
 import Header from "@/components/Header.astro";
 import Footer from "@/components/Footer.astro";
+import Socials from "@/components/Socials.astro";
 import WorkCard from "@/components/WorkCard.astro";
 import Newsletter from "@/components/Newsletter.astro";
 import CreatorIcon from "@/components/CreatorIcon.astro";
@@ -46,6 +47,11 @@ const featured = featuredCandidates
         class="portfolio-hero panel-container"
         aria-labelledby="hero-heading"
       >
+        <h1 id="hero-heading">
+          {tr("Hey ")}
+          <span class="blue-underline">{tr("Friends")}</span>
+          <span class="portfolio-wave" aria-hidden="true">👋</span>
+        </h1>
         <div class="portfolio-portrait">
           <span class="portfolio-portrait-circle" aria-hidden="true"></span>
           <img
@@ -74,23 +80,21 @@ const featured = featuredCandidates
           }
         </div>
         <div class="portfolio-hero-copy">
-          <h1 id="hero-heading">
-            {tr("Hey ")}
-            <span class="blue-underline">{tr("Friends")}</span>
-            <span class="portfolio-wave" aria-hidden="true">👋</span>
-          </h1>
           <p class="portfolio-hero-intro">
             {
               tr(
                 "I'm {{name}}. I'm a developer, writer, and video creator sharing ideas on "
               ).replace("{{name}}", creator.name)
             }
-            <a href={href("works/")}
-              >{
-                tr("technology, creativity, and building a meaningful life.")
-              }</a
-            >
+            {tr("technology, creativity, and building a meaningful life.")}
           </p>
+          {
+            config.socials.length > 0 && (
+              <div class="portfolio-hero-socials" data-pagefind-ignore>
+                <Socials />
+              </div>
+            )
+          }
           <div class="portfolio-hero-actions">
             <a class="button button-blue" href={href("works/")}
               >{tr("Explore my work")} <CreatorIcon name="arrow" size={20} /></a
