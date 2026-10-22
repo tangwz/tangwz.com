@@ -3,6 +3,7 @@ import { getEntry, render } from "astro:content";
 import Layout from "@/layouts/Layout.astro";
 import Header from "@/components/Header.astro";
 import Footer from "@/components/Footer.astro";
+import Socials from "@/components/Socials.astro";
 import { getRelativeLocaleUrl } from "astro:i18n";
 import config from "@/config";
 
@@ -29,7 +30,16 @@ const canonicalURL =
     data-pagefind-body={!isFallback ? "" : undefined}
     class="wide-container"
   >
-    <div class="page-header"><h1>{page.data.title}</h1></div>
+    <div class="page-header">
+      <h1>{page.data.title}</h1>
+      {
+        config.socials.length > 0 && (
+          <div class="page-header-socials" data-pagefind-ignore>
+            <Socials />
+          </div>
+        )
+      }
+    </div>
     <article class="prose dark:prose-invert mb-16 max-w-none" lang="zh">
       <Content />
     </article>
