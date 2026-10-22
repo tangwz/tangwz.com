@@ -16,6 +16,8 @@ cat dist/build-info.json
 
 仅打包 `dist/`，将压缩包和 SHA-256 校验文件保存到博客仓库的 GitHub Release。不要打包源代码、环境文件、凭据或 `node_modules/`。Release 固定到已推送的完整提交 SHA，ECS 下载后必须核对校验和及构建信息。
 
+ECS 传输使用深圳地域的私有 OSS 桶 `tangwz-com-releases-4336f3c3`，对象路径为 `releases/<source-sha>/tangwz-com.tar.gz`。上传同一份发布包并保持桶和对象私有，为单个对象生成 30 分钟有效的 HTTPS 签名地址供 ECS 下载；不要把签名地址写入仓库或日志，也不要将本机长期凭据复制到 ECS。GitHub Release 保留固定版本及校验和，OSS 仅作为同地域传输中转，下载后仍核对原始 SHA-256。
+
 ## ECS 目录与切换
 
 - 版本目录：`/var/www/tangwz.com/releases/<source-sha>/`。
