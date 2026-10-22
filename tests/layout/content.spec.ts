@@ -1,6 +1,29 @@
 import { expect, test } from "@playwright/test";
 import config from "../../astro-paper.config";
 
+test("legacy formulas render membership symbols and configuration subscripts", async ({
+  page,
+}) => {
+  for (const prefix of ["", "/en"]) {
+    await page.goto(`${prefix}/posts/202207-tla-2/`);
+    const membership = page.locator("main article mjx-container");
+    await expect(membership).toHaveCount(1);
+    await expect(membership.locator('[data-c="2208"]')).toHaveCount(1);
+
+    await page.goto(`${prefix}/posts/202102-raft/`);
+    const configurations = page.locator("main article mjx-container");
+    expect(await configurations.count()).toBeGreaterThan(0);
+    for (const formula of await configurations.all()) {
+      await expect(formula).toHaveAttribute(
+        "aria-label",
+        /^C_\{(?:new|old\+new)\}$/
+      );
+      await expect(formula.locator('[data-mml-node="msub"]')).toHaveCount(1);
+      await expect(formula.locator('[data-c="5F"]')).toHaveCount(0);
+    }
+  }
+});
+
 test("legacy Chinese articles use localized footnotes in both locale routes", async ({
   page,
 }) => {

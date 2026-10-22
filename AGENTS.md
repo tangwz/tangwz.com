@@ -38,6 +38,9 @@ pnpm test:migrate-old-blog
 ## 主题同步
 
 - 主题来源为 `https://github.com/tangwz/tang`，当前基线记录在 `theme.lock.json`。
+- 本仓库对站点的定制仅限文字内容、个人数据和主题已提供的配置项；不得手工修改 Tang 主题的样式、排版、布局、组件或交互实现，也不得通过额外 CSS、内联样式或组件分叉绕过此限制。
+- 所有主题修改（包括缺陷修复和新增配置项）必须先在 [tangwz/tang](https://github.com/tangwz/tang) 仓库实现并验证，再通过主题同步进入本项目，不在博客仓库维护主题补丁。
+- 现有配置无法满足需求时，先在主题仓库补充配置能力，再同步并调整博客配置，不直接修改本地主题源码。
 - 使用 `npm run theme:upgrade` 同步并验证主题，先提交或 stash 当前改动。
 - 主题同步采用三方合并；发生冲突时先解决冲突，不要直接覆盖本地文件或跳过构建。
 - `src/content/`、`src/data/`、`astro-paper.config.ts`、个人 favicon 和 OG 图片属于博客，不从主题覆盖。
