@@ -1,0 +1,82 @@
+---
+import { useCreatorTranslations } from "@/i18n/creator";
+const tr = useCreatorTranslations(Astro.currentLocale);
+import BilibiliIcon from "./BilibiliIcon.astro";
+import CreatorIcon from "./CreatorIcon.astro";
+import { resolveBilibiliVideo } from "@/utils/bilibili";
+type Props = {
+  url: string;
+  title: string;
+  image: string;
+  label: string;
+  sample?: boolean;
+};
+const { url, title, image, label, sample = false } = Astro.props;
+const video = resolveBilibiliVideo(url);
+---
+
+<section
+  class="bilibili-player"
+  aria-label={tr("Video player")}
+  data-pagefind-ignore
+>
+  <div class="bilibili-screen">
+    {
+      video?.embedUrl ? (
+        <iframe
+          src={video.embedUrl}
+          title={`${tr("Watch on Bilibili")}: ${title}`}
+          loading="lazy"
+          allow="fullscreen; picture-in-picture"
+          allowfullscreen
+          referrerpolicy="strict-origin-when-cross-origin"
+        />
+      ) : (
+        <div class="bilibili-placeholder">
+          <>
+            <img
+              src={image}
+              alt=""
+              width="1200"
+              height="675"
+              fetchpriority="high"
+            />
+            <span class="player-art-label">{label}</span>
+            <span class="player-badge">
+              <BilibiliIcon size={32} />
+              {tr(sample ? "Theme preview" : "Watch on Bilibili")}
+            </span>
+          </>
+        </div>
+      )
+    }
+  </div>
+  <div class="bilibili-actions">
+    {
+      video && (
+        <a
+          class="button button-blue"
+          href={video.watchUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <BilibiliIcon size={22} />
+          {tr("Watch on Bilibili")}
+        </a>
+      )
+    }<a class="text-link" href="#article"
+      >{tr("Read the transcript")} <CreatorIcon name="arrow" size={20} /></a
+    >
+  </div>
+  {
+    !video && (
+      <p class="player-note">
+        {tr(
+          sample
+            ? "This preview episode includes a sample transcript. The video is not published yet."
+            : "This video is not published yet. You can read the transcript below."
+        )}
+      </p>
+    )
+  }
+</section>

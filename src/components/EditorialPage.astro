@@ -1,0 +1,140 @@
+---
+import { useCreatorTranslations } from "@/i18n/creator";
+const tr = useCreatorTranslations(Astro.currentLocale);
+import type { MarkdownHeading } from "astro";
+import { getRelativeLocaleUrl } from "astro:i18n";
+import Header from "./Header.astro";
+import Footer from "./Footer.astro";
+import ArticleMeta from "./ArticleMeta.astro";
+import ArticleCover from "./ArticleCover.astro";
+import ArticleToc from "./ArticleToc.astro";
+import Newsletter from "./Newsletter.astro";
+import ArticleEnhancements from "./ArticleEnhancements.astro";
+import RelatedContent from "./RelatedContent.astro";
+import type { RelatedContentItem } from "@/types/relatedContent";
+import config from "@/config";
+type Props = {
+  contentLanguage?: string;
+  title: string;
+  date: Date;
+  timezone?: string;
+  author?: string;
+  category: string;
+  kind?: "article" | "video";
+  headings: MarkdownHeading[];
+  localeAnchors?: Record<string, string>;
+  sample?: boolean;
+  coverImage?: string;
+  coverColor?: string;
+  canonicalURL?: string;
+  searchable?: boolean;
+  relatedItems?: RelatedContentItem[];
+};
+const {
+  contentLanguage,
+  title,
+  date,
+  timezone,
+  author,
+  category,
+  kind = "article",
+  headings,
+  localeAnchors,
+  sample = false,
+  coverImage,
+  coverColor = "blue",
+  canonicalURL,
+  searchable = true,
+  relatedItems = [],
+} = Astro.props;
+const locale = Astro.currentLocale ?? config.site.lang;
+const href = (path: string) => getRelativeLocaleUrl(locale, path);
+const tocLabel = tr(
+  kind === "video" ? "In this transcript:" : "In this article:"
+);
+---
+
+<Header />
+<main
+  id="main-content"
+  class="editorial-page"
+  data-pagefind-body={searchable ? "" : undefined}
+  data-locale-anchors={localeAnchors
+    ? JSON.stringify(localeAnchors)
+    : undefined}
+>
+  <div class="editorial-heading-panel">
+    <div class="panel-container editorial-heading">
+      <div class="editorial-tags" data-pagefind-ignore>
+        <a
+          class="topic-pill pill-purple"
+          href={`${href("works/")}?type=${kind}`}
+          >{tr(kind === "video" ? "Videos" : "Articles")}</a
+        ><span class="topic-pill pill-yellow">{tr(category)}</span>
+      </div>
+      <h1>{title}</h1>
+      <ArticleMeta {title} {date} {timezone} {author} {canonicalURL} />
+    </div>
+  </div>
+  <div class="editorial-grid wide-container">
+    <div class="editorial-main">
+      <div class="editorial-media">
+        <slot name="cover"
+          ><ArticleCover {title} image={coverImage} color={coverColor} /></slot
+        >
+      </div>
+      <ArticleToc {headings} label={tocLabel} mobile />
+      {
+        sample && (
+          <p class="translation-notice sample-notice" data-pagefind-ignore>
+            {tr(
+              "Theme example. This content demonstrates the layout and features."
+            )}
+          </p>
+        )
+      }
+      {
+        contentLanguage && contentLanguage !== locale && (
+          <p class="translation-notice" data-pagefind-ignore>
+            {tr(
+              "This translation is not available yet. The original text is shown below."
+            )}
+          </p>
+        )
+      }
+      <article
+        id="article"
+        class="app-prose editorial-prose"
+        lang={contentLanguage ?? locale}
+        data-copy-label={tr("Copy")}
+        data-copied-label={tr("Copied")}
+        data-zoom-label={tr("Zoom image")}
+        data-preview-label={tr("Image preview")}
+        data-close-label={tr("Close image preview")}
+      >
+        <slot />
+      </article>
+      {
+        Astro.slots.has("after") && (
+          <div class="editorial-adjacent" data-pagefind-ignore>
+            <slot name="after" />
+          </div>
+        )
+      }
+    </div>
+    <aside
+      class="editorial-sidebar"
+      aria-label={tr("Newsletter and table of contents")}
+      data-pagefind-ignore
+    >
+      <Newsletter compact interest={`${kind}-sidebar`} />
+      <div class="toc-sticky"><ArticleToc {headings} label={tocLabel} /></div>
+    </aside>
+  </div>
+  <RelatedContent items={relatedItems} {kind} />
+  <div class="newsletter-section wide-container" data-pagefind-ignore>
+    <Newsletter interest={`${kind}-footer`} />
+  </div>
+</main>
+<Footer />
+<ArticleEnhancements />

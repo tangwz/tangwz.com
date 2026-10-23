@@ -1,0 +1,104 @@
+---
+import { useCreatorTranslations } from "@/i18n/creator";
+const tr = useCreatorTranslations(Astro.currentLocale);
+import Layout from "@/layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+import Card from "@/components/Card.astro";
+import Pagination from "@/components/Pagination.astro";
+import config from "@/config";
+import type { Page } from "astro";
+import type { CollectionEntry } from "astro:content";
+type Props = { page: Page<CollectionEntry<"posts">> };
+const { page } = Astro.props;
+const topics = [...new Set(page.data.flatMap(post => post.data.tags))];
+---
+
+<Layout
+  title={`${tr("Writing")} | ${tr(config.site.title)}`}
+  description={tr(
+    "Essays and field notes on building, creating, and living with intention."
+  )}
+>
+  <Header /><main
+    id="main-content"
+    class="wide-container"
+    data-writing-collection
+  >
+    <div class="page-header">
+      <span class="eyebrow">{tr("NOTES FROM THE JOURNEY")}</span><h1>
+        {tr("A few things")}<br /><em>{tr("on my mind.")}</em>
+      </h1><p>
+        {
+          tr(
+            "Essays and field notes on creating, building, and living a little more intentionally. A place to think things through."
+          )
+        }
+      </p>
+    </div><div
+      class="filter-bar"
+      role="group"
+      aria-label={tr("Filter essays by topic")}
+    >
+      <button class="filter-button" data-writing-all aria-pressed="true">
+        {tr("All writing")}
+      </button>
+      {
+        topics.map(topic => (
+          <button class="filter-button" data-topic={topic} aria-pressed="false">
+            {topic}
+          </button>
+        ))
+      }
+    </div><ul class="article-list">
+      {page.data.map(post => <Card {...post} />)}
+    </ul><p id="writing-empty" class="content-note" hidden>
+      {
+        tr(
+          "No essays on this topic on this page yet. Try another topic or explore the next page."
+        )
+      }
+    </p>{
+      page.data.some(post => post.data.sample) && (
+        <p class="content-note">
+          {tr("This collection includes sample essays from the theme.")}
+        </p>
+      )
+    }
+  </main><Pagination {page} /><Footer />
+</Layout>
+<script>
+  function setupFilters() {
+    const root = document.querySelector<HTMLElement>(
+      "[data-writing-collection]"
+    );
+    if (!root || root.dataset.bound) return;
+    root.dataset.bound = "true";
+    const buttons = root.querySelectorAll<HTMLButtonElement>(".filter-button");
+    const items = [
+      ...root.querySelectorAll<HTMLElement>(".article-list > li"),
+    ].map(element => ({
+      element,
+      tags: JSON.parse(element.dataset.tags ?? "[]") as string[],
+    }));
+    const empty = root.querySelector<HTMLElement>("#writing-empty");
+    buttons.forEach(button => {
+      button.addEventListener("click", () => {
+        buttons.forEach(item =>
+          item.setAttribute("aria-pressed", String(item === button))
+        );
+        let visible = 0;
+        items.forEach(({ element, tags }) => {
+          const matches =
+            button.hasAttribute("data-writing-all") ||
+            tags.includes(button.dataset.topic ?? "");
+          element.hidden = !matches;
+          if (matches) visible++;
+        });
+        if (empty) empty.hidden = visible > 0;
+      });
+    });
+  }
+  setupFilters();
+  document.addEventListener("astro:page-load", setupFilters);
+</script>

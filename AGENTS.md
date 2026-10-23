@@ -32,6 +32,28 @@ pnpm test:migrate-old-blog
 - `src/layouts/`：页面布局。
 - `src/styles/`：全局样式。
 - `scripts/migrate-old-blog/`：旧博客静态 HTML 到 Markdown 的迁移工具。
+- `src/views/`：Tang 主题的页面视图；路由文件主要负责页面入口。
+- `src/data/`：博客专属的创作者、书籍、课程和 Newsletter 数据。
+
+## 主题同步
+
+- 主题来源为 `https://github.com/tangwz/tang`，当前基线记录在 `theme.lock.json`。
+- 本仓库对站点的定制仅限文字内容、个人数据和主题已提供的配置项；不得手工修改 Tang 主题的样式、排版、布局、组件或交互实现，也不得通过额外 CSS、内联样式或组件分叉绕过此限制。
+- 所有主题修改（包括缺陷修复和新增配置项）必须先在 [tangwz/tang](https://github.com/tangwz/tang) 仓库实现并验证，再通过主题同步进入本项目，不在博客仓库维护主题补丁。
+- 现有配置无法满足需求时，先在主题仓库补充配置能力，再同步并调整博客配置，不直接修改本地主题源码。
+- 使用 `npm run theme:upgrade` 同步并验证主题，先提交或 stash 当前改动。
+- 主题同步采用三方合并；发生冲突时先解决冲突，不要直接覆盖本地文件或跳过构建。
+- `src/content/`、`src/data/`、`astro-paper.config.ts`、个人 favicon 和 OG 图片属于博客，不从主题覆盖。
+- 中文使用根路径，英文使用 `/en/`；保持既有文章 URL 不变。
+- 不迁入主题示例文章、视频、书籍、课程或公开来信。
+- 同步机制与 GitHub Actions 配置见 `docs/THEME.md`。
+
+## 发布与云资源
+
+- 禁止使用 OSS 保存发布包或作为发布中转；不得重新创建 OSS 发布桶。
+- 发布包通过现有博客仓库的 GitHub Release 分发，ECS 下载后核对 SHA-256 和构建信息，再原子切换版本。
+- 下载失败时重试、断点续传或排查网络；已配置授权的 SSH 连接时可使用 SCP 直传。不得自动回退到 OSS 或新建收费中转资源。
+- 保留 ECS 上的已发布版本和回滚目录，不因清理传输介质删除线上文件。具体流程见 `docs/DEPLOYMENT.md`。
 
 ## 文章与资源
 

@@ -1,20 +1,21 @@
-import { defineAstroPaperConfig } from "./src/types/config";
+import { defineAstroPaperConfig } from "./src/types/config.ts";
 
 export default defineAstroPaperConfig({
   site: {
     url: "https://tangwz.com/",
     title: "唐师兄的个人主页",
-    description: "唐师兄的个人主页，一个赛博精神病患者。",
+    description: "唐师兄的个人主页",
     author: "唐师兄",
     profile: "https://tangwz.com/about/",
     ogImage: "tangwz-og.png",
     lang: "zh",
     timezone: "Asia/Shanghai",
     dir: "ltr",
+    googleAnalyticsId: "G-Z59F6SSQQT",
   },
   posts: {
-    perPage: 4,
-    perIndex: 4,
+    perPage: 9,
+    perIndex: 3,
     scheduledPostMargin: 15 * 60 * 1000,
   },
   features: {

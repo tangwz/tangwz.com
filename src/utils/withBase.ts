@@ -1,3 +1,9 @@
+import {
+  prefixAssetPath,
+  resolveCoverImage,
+  type CoverImage,
+} from "./assetPaths";
+
 const base = import.meta.env.BASE_URL.replace(/\/+$/, "");
 const baseRoot = base === "" ? "/" : `${base}/`;
 
@@ -36,11 +42,9 @@ export function stripBase(pathname: string): string {
  * Does not force a trailing slash for empty paths.
  */
 export function getAssetPath(path: string): string {
-  // Strip leading slash to avoid double-slash when concatenating with baseRoot
-  const normalizedPath = path.replace(/^\/+/, "");
+  return prefixAssetPath(path, base);
+}
 
-  if (!normalizedPath) {
-    return base === "" ? "/" : base;
-  }
-  return baseRoot + normalizedPath;
+export function getCoverImagePath(image: CoverImage): string | undefined {
+  return resolveCoverImage(image, base);
 }

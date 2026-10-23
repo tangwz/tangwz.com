@@ -19,12 +19,14 @@ interface SiteConfig {
   dir?: "ltr" | "rtl" | "auto";
   /** Google Search Console verification meta tag value */
   googleVerification?: string;
+  /** Optional GA4 measurement ID (G-...). Omit to disable analytics. */
+  googleAnalyticsId?: string;
 }
 
 interface PostsConfig {
-  /** Posts per page on paginated listing pages */
+  /** Items per page in the work library and article lists. */
   perPage?: number;
-  /** Posts shown on the index/home page */
+  /** Featured works shown on the home page. */
   perIndex?: number;
   /**
    * Scheduled posts within this window (ms) of their pubDatetime
@@ -115,7 +117,7 @@ type ResolvedSiteConfig = Required<
     | "ogImage"
   >
 > &
-  Pick<SiteConfig, "profile" | "googleVerification">;
+  Pick<SiteConfig, "profile" | "googleVerification" | "googleAnalyticsId">;
 
 export interface ResolvedAstroPaperConfig {
   site: ResolvedSiteConfig;

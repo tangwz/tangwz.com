@@ -1,0 +1,50 @@
+---
+import { useCreatorTranslations } from "@/i18n/creator";
+const tr = useCreatorTranslations(Astro.currentLocale);
+import { getRelativeLocaleUrl } from "astro:i18n";
+import Layout from "@/layouts/Layout.astro";
+import Header from "@/components/Header.astro";
+import Footer from "@/components/Footer.astro";
+import BookCover from "@/components/BookCover.astro";
+import { books } from "@/data/creator";
+import config from "@/config";
+type Props = { book: (typeof books)[number] };
+const { book } = Astro.props;
+const href = (path: string) =>
+  getRelativeLocaleUrl(Astro.currentLocale ?? config.site.lang, path);
+---
+
+<Layout
+  title={`${book.title} — ${tr("Reading Notes")} | ${tr(config.site.title)}`}
+  description={book.note}
+>
+  <Header /><main id="main-content" data-pagefind-body class="detail-content">
+    <a class="back-link" href={`${href("works/")}?type=reading`}
+      >{tr("← Back to reading notes")}</a
+    ><h1>
+      {book.title}
+    </h1><p>{book.author} · {book.category}</p><div class="detail-book">
+      <BookCover {book} /><div>
+        <h2>{tr("An idea to carry with you")}</h2><p>{book.note}</p><h2>
+          {tr("A question to sit with")}
+        </h2><p>
+          {
+            tr(
+              "What is one small thing you could change in your own practice this week?"
+            )
+          }
+        </p>{
+          book.sample && (
+            <p class="content-note">
+              {tr(
+                "This is a sample reading note for the theme, rather than a personal review. Replace it with your own notes and reflections."
+              )}
+            </p>
+          )
+        }<a class="text-link" href={href("newsletter")}
+          >{tr("More ideas in The Sunday Edit ↗")}</a
+        >
+      </div>
+    </div>
+  </main><Footer />
+</Layout>

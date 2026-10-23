@@ -1,3 +1,4 @@
+import zh from "./lang/zh.json";
 import type { UIStrings } from "./types";
 
 export { tplStr } from "./format";
@@ -6,7 +7,7 @@ const modules = import.meta.glob<{ default: UIStrings }>("./lang/*.ts", {
   eager: true,
 });
 
-const translations: Record<string, UIStrings> = {};
+const translations: Record<string, UIStrings> = { zh };
 for (const [path, mod] of Object.entries(modules)) {
   const locale = path.slice("./lang/".length, -".ts".length);
   translations[locale] = mod.default;

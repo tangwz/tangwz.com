@@ -397,24 +397,24 @@ Raft 通过共同一致(Joint Consensus)来完成两阶段协议，即：新、�
 
 第一阶段：
 
-- Leader 收到 $C\_{new}$ 的配置变更请求后，先写入一条 $C\_{old+new}$ 的日志，配置变更立即生效，然后将日志通过 `AppendEntries RPC` 复制到 Follower 中，收到该 $C\_{old+new}$ 的节点立即应用该配置作为当前节点的配置；
-- $C\_{old+new}$ 日志复制到多数派节点上时，$C\_{old+new}$ 的日志已提交；
+- Leader 收到 $C_{new}$ 的配置变更请求后，先写入一条 $C_{old+new}$ 的日志，配置变更立即生效，然后将日志通过 `AppendEntries RPC` 复制到 Follower 中，收到该 $C_{old+new}$ 的节点立即应用该配置作为当前节点的配置；
+- $C_{old+new}$ 日志复制到多数派节点上时，$C_{old+new}$ 的日志已提交；
 
-$C\_{old+new}$ 日志已提交保证了后续任何 Leader 一定有 $C\_{old+new}$ 日志，Leader 选举过程必须获得旧配置中的多数派和新配置中的多数派同时投票。
+$C_{old+new}$ 日志已提交保证了后续任何 Leader 一定有 $C_{old+new}$ 日志，Leader 选举过程必须获得旧配置中的多数派和新配置中的多数派同时投票。
 
 第二阶段：
 
-- $C\_{old+new}$ 日志已提交后，立即写入一条 $C\_{new}$ 的日志，并将该日志通过 `AppendEntries RPC` 复制到 Follower 中，收到 $C\_{new}$ 的节点立即应用该配置作为当前节点的配置；
-- $C\_{new}$ 日志复制到多数派节点上时，$C\_{new}$ 的日志已提交；在 $C\_{new}$ 日志提交以后，后续的配置都基于 $C\_{new}$ 了；
+- $C_{old+new}$ 日志已提交后，立即写入一条 $C_{new}$ 的日志，并将该日志通过 `AppendEntries RPC` 复制到 Follower 中，收到 $C_{new}$ 的节点立即应用该配置作为当前节点的配置；
+- $C_{new}$ 日志复制到多数派节点上时，$C_{new}$ 的日志已提交；在 $C_{new}$ 日志提交以后，后续的配置都基于 $C_{new}$ 了；
 
 ![-w907](https://i.loli.net/2021/02/03/6cXKlrEdxshvB3F.jpg)
 
 Joint Consensus 还有一些细节：
 
 - 变更过程中，来自新旧配置的节点都有可能成为 Leader；
-- 如果当前 Leader 不在 $C\_{new}$ 配置里面，一旦 $C\_{new}$ 提交，它必须下台(step down)。
+- 如果当前 Leader 不在 $C_{new}$ 配置里面，一旦 $C_{new}$ 提交，它必须下台(step down)。
 
-如图所示，旧 Leader 不再是新配置的成员之后，还有可能继续服务一小段时间；即旧 Leader 可能在 $C\_{new}$ 配置下继续当 Leader（虽然实质上并不是Leader），直到 $C\_{new}$ 的日志复制到多数派上而 committed；
+如图所示，旧 Leader 不再是新配置的成员之后，还有可能继续服务一小段时间；即旧 Leader 可能在 $C_{new}$ 配置下继续当 Leader（虽然实质上并不是Leader），直到 $C_{new}$ 的日志复制到多数派上而 committed；
 
 # 相关阅读
 

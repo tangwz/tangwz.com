@@ -32,3 +32,8 @@ public/pagefind
 # local migration scratch space
 .cache/
 migration-report.json
+
+# browser checks
+playwright-report/
+test-results/
+.pnpm-store/
