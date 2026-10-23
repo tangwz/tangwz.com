@@ -48,6 +48,13 @@ pnpm test:migrate-old-blog
 - 不迁入主题示例文章、视频、书籍、课程或公开来信。
 - 同步机制与 GitHub Actions 配置见 `docs/THEME.md`。
 
+## 发布与云资源
+
+- 禁止使用 OSS 保存发布包或作为发布中转；不得重新创建 OSS 发布桶。
+- 发布包通过现有博客仓库的 GitHub Release 分发，ECS 下载后核对 SHA-256 和构建信息，再原子切换版本。
+- 下载失败时重试、断点续传或排查网络；已配置授权的 SSH 连接时可使用 SCP 直传。不得自动回退到 OSS 或新建收费中转资源。
+- 保留 ECS 上的已发布版本和回滚目录，不因清理传输介质删除线上文件。具体流程见 `docs/DEPLOYMENT.md`。
+
 ## 文章与资源
 
 - 文章 frontmatter 使用当前项目已有字段约定，例如 `title`、`description`、`pubDatetime`、`modDatetime`、`tags`、`canonicalURL`、`ogImage`、`draft`。
