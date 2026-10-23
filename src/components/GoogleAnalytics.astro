@@ -1,0 +1,22 @@
+---
+type Props = {
+  measurementId: string;
+};
+
+const { measurementId } = Astro.props;
+---
+
+<script
+  is:inline
+  async
+  src={`https://www.googletagmanager.com/gtag/js?id=${measurementId}`}
+  transition:persist="google-analytics-loader"></script>
+<script is:inline define:vars={{ measurementId }}>
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = function () {
+    window.dataLayer.push(arguments);
+  };
+  window.gtag("js", new Date());
+  // Enhanced measurement handles history changes; do not also send page_view.
+  window.gtag("config", measurementId);
+</script>

@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { runInNewContext } from "node:vm";
+import { fromHtml } from "hast-util-from-html";
 import config from "../astro-paper.config.ts";
+import { resolveGoogleAnalyticsId } from "../src/utils/googleAnalytics.ts";
 import { getMathErrors } from "../src/utils/mathValidation.ts";
 import { getOutputPath } from "../src/utils/buildPaths.ts";
 
@@ -15,6 +18,7 @@ const info = JSON.parse(
 const site = new URL(info.site);
 const base = info.base ?? "/";
 const baseRoot = base.replace(/\/+$/, "") + "/";
+const analyticsId = resolveGoogleAnalyticsId(config.site.googleAnalyticsId);
 const errors = [];
 const decode = value => value.replace(/&amp;/g, "&");
 const exists = async url =>
@@ -46,8 +50,97 @@ for (const file of htmlFiles)
   htmlByPath.set(pathFor(file), await readFile(file, "utf8"));
 const noindex = html =>
   /<meta\b[^>]*name="robots"[^>]*content="[^"]*noindex/i.test(html);
+let analyticsInitializerText;
+
+function checkAnalytics(html, path) {
+  // Standalone theme demos do not use the site's shared layout.
+  if (path.startsWith("/design/")) return;
+  const scripts = [];
+  let privacyText = "";
+  let hasGooglePolicy = false;
+  const text = node =>
+    node.type === "text"
+      ? node.value
+      : (node.children ?? []).map(text).join(" ");
+  const inspect = node => {
+    if (node.type === "element") {
+      if (node.tagName === "script")
+        scripts.push({ ...node.properties, text: text(node) });
+      if (node.tagName === "main") privacyText = text(node);
+      if (
+        node.tagName === "a" &&
+        node.properties.href ===
+          "https://policies.google.com/technologies/partner-sites"
+      )
+        hasGooglePolicy = true;
+    }
+    (node.children ?? []).forEach(inspect);
+  };
+  inspect(fromHtml(html));
+  const analytics = scripts.filter(
+    script =>
+      String(script.dataAstroTransitionPersist ?? "").startsWith(
+        "google-analytics-"
+      ) ||
+      /googletagmanager\.com\/gtag\/js/.test(script.src ?? "") ||
+      /\bgtag\s*\(/.test(script.text)
+  );
+  const loaders = analytics.filter(script => script.src);
+  const initializers = analytics.filter(script => !script.src);
+  if (!analyticsId) {
+    if (analytics.length)
+      errors.push(`Disabled analytics is still loaded: ${path}`);
+  } else if (loaders.length !== 1 || initializers.length !== 1) {
+    errors.push(`Expected one analytics loader and initializer: ${path}`);
+  } else {
+    const [loader] = loaders;
+    const [initializer] = initializers;
+    if (analyticsInitializerText === undefined)
+      analyticsInitializerText = initializer.text;
+    else if (analyticsInitializerText !== initializer.text)
+      errors.push(`Analytics initializer varies between pages: ${path}`);
+    if (
+      loader.src !==
+        `https://www.googletagmanager.com/gtag/js?id=${analyticsId}` ||
+      loader.async !== true ||
+      loader.dataAstroTransitionPersist !== "google-analytics-loader"
+    )
+      errors.push(`Incorrect analytics loader or persistence: ${path}`);
+    try {
+      const context = {};
+      context.window = context;
+      runInNewContext(initializer.text, context, { timeout: 100 });
+      assert.equal(typeof context.gtag, "function");
+      const calls = Array.from(context.dataLayer ?? [], args =>
+        Array.from(args)
+      );
+      assert.equal(calls.length, 2);
+      assert.equal(calls[0][0], "js");
+      assert.equal(
+        Object.prototype.toString.call(calls[0][1]),
+        "[object Date]"
+      );
+      assert.deepEqual(calls[1], ["config", analyticsId]);
+    } catch {
+      errors.push(`Incorrect analytics initialization: ${path}`);
+    }
+  }
+  if (/(?:^|\/)privacy\/$/.test(path)) {
+    const disclosed =
+      privacyText.includes("Google Analytics") &&
+      /\bcookies?\b/i.test(privacyText);
+    if (
+      disclosed !== Boolean(analyticsId) ||
+      hasGooglePolicy !== Boolean(analyticsId)
+    )
+      errors.push(
+        `Analytics privacy disclosure does not match configuration: ${path}`
+      );
+  }
+}
 
 for (const [path, html] of htmlByPath) {
+  checkAnalytics(html, path);
   errors.push(...getMathErrors(html).map(message => `${message}: ${path}`));
   const canonical = html.match(
     /<link\b[^>]*rel="canonical"[^>]*href="([^"]+)"/

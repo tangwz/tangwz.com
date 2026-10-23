@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 for (const prefix of ["", "/en"]) {
   test(`${prefix}/posts filters every page by its actual tags after client navigation`, async ({

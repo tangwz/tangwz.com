@@ -12,6 +12,7 @@ import {
 import { translate } from "@/i18n/creator";
 import { getRelativeLocaleUrl } from "astro:i18n";
 import config from "@/config";
+import GoogleAnalytics from "@/components/GoogleAnalytics.astro";
 import "@/styles/global.css";
 import "@/styles/creator.css";
 import "@/styles/editorial.css";
@@ -192,6 +193,11 @@ const rssHref = getRelativeLocaleUrl(locale, "rss.xml").replace(/\/+$/, "");
       })();
     </script>
 
+    {
+      import.meta.env.PROD && site.googleAnalyticsId && (
+        <GoogleAnalytics measurementId={site.googleAnalyticsId} />
+      )
+    }
     {clientRouting && <ClientRouter />}
   </head>
   <body

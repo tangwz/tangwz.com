@@ -68,8 +68,24 @@ const newsletter = creator.newsletter;
       }
     </p><h2>{tr("Browsing the site")}</h2><p>
       {
+        config.site.googleAnalyticsId
+          ? tr(
+              "This site uses Google Analytics to measure visits and page navigation. Google Analytics uses cookies and processes usage data."
+            )
+          : tr("This site does not load analytics scripts.")
+      }
+    </p>{
+      config.site.googleAnalyticsId && (
+        <p>
+          <a href="https://policies.google.com/technologies/partner-sites">
+            {tr("How Google uses data from sites that use its services")}
+          </a>
+        </p>
+      )
+    }<p>
+      {
         tr(
-          "The theme does not include analytics or advertising scripts. Search runs in your browser. Your hosting provider may process standard request logs under its own privacy policy."
+          "Search runs in your browser. Your hosting provider may process standard request logs under its own privacy policy."
         )
       }
     </p>

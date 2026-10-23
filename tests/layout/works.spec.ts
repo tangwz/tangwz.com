@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 
 for (const route of ["/works/", "/en/works/"]) {
   test(`${route} fills the desktop grid and paginates all work`, async ({

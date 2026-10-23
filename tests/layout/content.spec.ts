@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import config from "../../astro-paper.config";
 
 test("legacy formulas render membership symbols and configuration subscripts", async ({
